@@ -1,15 +1,42 @@
+const jwt = require('jsonwebtoken');
+const passport = require('passport');
 const router = require('express').Router();
-// const authRoutes = require('ais-auth').routes;
-// const passport = require('passport');
-const activities = require('./activities.js');
-// const utils = require('../utils');
+const activities = require('./activities');
+const forms = require('./forms');
+const users = require('./users');
+const roles = require('../utils/roles');
 
-// router.all('/api*', passport.authenticate('jwt', { session: false }));
-// router.all('/api/ais*', utils.checkBackOfficeLogin);
+const tokenOptions = {};
+tokenOptions.issuer = process.env.JWT_ISSUER;
+tokenOptions.audience = process.env.JWT_AUDIENCE;
+tokenOptions.expiresIn = process.env.JWT_TTL;
+
+router.get('/callback', (req, res, next) => {
+  passport.authenticate('auth0', function (err, user, info) {
+    if (err) { return next(err); }
+    if (!user) { return res.redirect('/v0/login'); }
+    req.logIn(user, (err) => {
+      if (err) { return next(err); }
+      res.redirect(`${process.env.PDC_STATIC}/?token=${encodeURIComponent(jwt.sign(user, process.env.JWT_SECRET, tokenOptions))}`);
+    });
+  })(req, res, next);
+});
+
+router.get('/login', passport.authenticate('auth0', {scope: 'openid email profile'}));
+
+router.all('/pilote/*', passport.authenticate('jwt', { session: false }), roles.isPilote);
+router.all('/admin/*', passport.authenticate('jwt', { session: false }), roles.isAdmin);
+
+router.get('/whoami', passport.authenticate('jwt', { session: false }), (req, res) => {
+  res.json({user: req.user})
+})
+
 router.get('/status', (req, res) => {
   res.json({ message: 'API OK' });
 });
 
 activities.create(router);
+forms.create(router);
+users.create(router);
 
 module.exports = router;

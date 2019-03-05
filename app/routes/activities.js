@@ -1,10 +1,10 @@
 const MongoClient = require('mongodb').MongoClient
 const ObjectID = require('mongodb').ObjectID
-const url = 'mongodb://root:example@localhost:27017'
+const url = process.env.MONGODB_URL
 
 const listActivities = async (req, res) => {
   MongoClient.connect(url, { useNewUrlParser: true })
-  .then(client => { // <- db as first argument
+  .then(client => {
     const db = client.db('permisdeconstruire')
     const activitiesColl = db.collection('activities');
     return activitiesColl.find().toArray();
@@ -19,7 +19,7 @@ const listActivities = async (req, res) => {
 
 const newActivity = async (req, res) => {
   MongoClient.connect(url, { useNewUrlParser: true })
-  .then(client => { // <- db as first argument
+  .then(client => {
     const db = client.db('permisdeconstruire')
     const activitiesColl = db.collection('activities');
     return activitiesColl.insertOne(req.body);
@@ -34,7 +34,7 @@ const newActivity = async (req, res) => {
 
 const editActivity = async (req, res) => {
   MongoClient.connect(url, { useNewUrlParser: true })
-  .then(client => { // <- db as first argument
+  .then(client => {
     const db = client.db('permisdeconstruire')
     const activitiesColl = db.collection('activities');
     return activitiesColl.updateOne({_id: new ObjectID(req.params.id)}, {'$set': req.body});
@@ -47,9 +47,39 @@ const editActivity = async (req, res) => {
   })
 };
 
+const registerActivity = async (req, res) => {
+  let activitiesColl;
+  MongoClient.connect(url, { useNewUrlParser: true })
+  .then(client => {
+    const db = client.db('permisdeconstruire')
+    activitiesColl = db.collection('activities');
+    return activitiesColl.findOne({_id: new ObjectID(req.params.id)});
+  }).then(activity => {
+    if(typeof(activity.participants) === 'undefined') {
+      activity.participants = [];
+    }
+    if(req.body.action === 'register') {
+      if(activity.participants.indexOf(req.user.email) === -1) {
+        activity.participants.push(req.user.email);
+      }
+    } else {
+      const participantIndex = activity.participants.indexOf(req.user.email);
+      activity.participants.splice(participantIndex, 1);
+    }
+
+    return activitiesColl.updateOne({_id: new ObjectID(req.params.id)}, {'$set': activity});
+  }).then(activity => {
+    res.json(activity.result);
+  })
+  .catch(function (err) {
+    console.log(err);
+    res.json(500, 'Error');
+  })
+};
+
 const deleteActivity = async (req, res) => {
   MongoClient.connect(url, { useNewUrlParser: true })
-  .then(client => { // <- db as first argument
+  .then(client => {
     const db = client.db('permisdeconstruire')
     const activitiesColl = db.collection('activities');
     return activitiesColl.deleteOne({_id: new ObjectID(req.params.id)});
@@ -65,8 +95,9 @@ const deleteActivity = async (req, res) => {
 module.exports = {
   create: router => {
     router.get('/activities', listActivities);
-    router.post('/activities', newActivity);
-    router.put('/activities/id/:id', editActivity);
-    router.delete('/activities/id/:id', deleteActivity);
+    router.post('/admin/activities', newActivity);
+    router.put('/admin/activities/id/:id', editActivity);
+    router.put('/pilote/activities/id/:id', registerActivity);
+    router.delete('/admin/activities/id/:id', deleteActivity);
   },
 };
