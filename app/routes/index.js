@@ -17,12 +17,17 @@ router.get('/callback', (req, res, next) => {
     if (!user) { return res.redirect('/v0/login'); }
     req.logIn(user, (err) => {
       if (err) { return next(err); }
-      res.redirect(`${process.env.PDC_STATIC}/?token=${encodeURIComponent(jwt.sign(user, process.env.JWT_SECRET, tokenOptions))}`);
+      res.redirect(`${req.session.returnTo}/?token=${encodeURIComponent(jwt.sign(user, process.env.JWT_SECRET, tokenOptions))}`);
     });
   })(req, res, next);
 });
 
-router.get('/login', passport.authenticate('auth0', {scope: 'openid email profile'}));
+function saveOrigin(req, res, next) {
+  req.session.returnTo = req.header('Referer');
+  next();
+}
+
+router.get('/login', saveOrigin, passport.authenticate('auth0', {scope: 'openid email profile'}));
 
 router.all('/pilote/*', passport.authenticate('jwt', { session: false }), roles.isPilote);
 router.all('/admin/*', passport.authenticate('jwt', { session: false }), roles.isAdmin);
