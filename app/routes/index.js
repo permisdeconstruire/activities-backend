@@ -4,6 +4,7 @@ const router = require('express').Router();
 const activities = require('./activities');
 const forms = require('./forms');
 const users = require('./users');
+const pedagogy = require('./pedagogy');
 const roles = require('../utils/roles');
 
 const tokenOptions = {};
@@ -43,5 +44,7 @@ router.get('/status', (req, res) => {
 activities.create(router);
 forms.create(router);
 users.create(router);
+pedagogy.create(router);
+
 
 module.exports = router;
