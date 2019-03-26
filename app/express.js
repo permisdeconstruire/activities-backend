@@ -1,7 +1,6 @@
-const path = require('path')
+const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
-const compress = require('compression');
 const cors = require('cors');
 const helmet = require('helmet');
 const passport = require('passport');
@@ -12,7 +11,6 @@ const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
 
 const routes = require('./routes/');
-
 
 function ignoreFavicon(req, res, next) {
   if (req.originalUrl === '/favicon.ico') {
@@ -30,11 +28,13 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(helmet());
 app.use(cors());
-app.use(expressSession({
-  secret: process.env.EXPRESS_SECRET,
-  resave: false,
-  saveUninitialized: true
-}));
+app.use(
+  expressSession({
+    secret: process.env.EXPRESS_SECRET,
+    resave: false,
+    saveUninitialized: true,
+  }),
+);
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -47,21 +47,22 @@ strategyOpts.secretOrKey = process.env.JWT_SECRET;
 strategyOpts.issuer = process.env.JWT_ISSUER;
 strategyOpts.audience = process.env.JWT_AUDIENCE;
 
+passport.use(
+  new Auth0Strategy(
+    {
+      domain: process.env.AUTH0_DOMAIN,
+      clientID: process.env.AUTH0_CLIENTID,
+      clientSecret: process.env.AUTH0_CLIENTSECRET,
+      callbackURL: '/v0/callback',
+    },
+    (accessToken, refreshToken, extraParams, profile, done) =>
+      done(null, { email: profile.emails[0].value, id: profile.id }),
+  ),
+);
 
-passport.use(new Auth0Strategy({
-    domain:       process.env.AUTH0_DOMAIN,
-    clientID:     process.env.AUTH0_CLIENTID,
-    clientSecret: process.env.AUTH0_CLIENTSECRET,
-    callbackURL:  '/v0/callback'
-  },
-  function(accessToken, refreshToken, extraParams, profile, done) {
-    return done(null, {email: profile.emails[0].value, id: profile.id});
-  }
-));
-
-passport.use(new JwtStrategy(strategyOpts, function(jwt_payload, done) {
-  return done(null, jwt_payload)
-}));
+passport.use(
+  new JwtStrategy(strategyOpts, (jwtPayload, done) => done(null, jwtPayload)),
+);
 
 passport.serializeUser((user, done) => {
   done(null, user);
@@ -72,6 +73,6 @@ passport.deserializeUser((user, done) => {
 });
 
 app.use('/v0/', routes);
-app.use('/static', express.static(path.join(__dirname, '../static')))
+app.use('/static', express.static(path.join(__dirname, '../static')));
 
 module.exports = app;
