@@ -332,6 +332,13 @@ atob@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/atob/-/atob-2.1.1.tgz#ae2d5a729477f289d60dd7f96a6314a22dd6c22a"
 
+autodetect-decoder-stream@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/autodetect-decoder-stream/-/autodetect-decoder-stream-1.0.3.tgz#08fcf85288f4d81985b050540ce39bc5b4acb92b"
+  dependencies:
+    iconv-lite "0.*"
+    jschardet "1.*"
+
 aws-sign2@~0.7.0:
   version "0.7.0"
   resolved "https://registry.yarnpkg.com/aws-sign2/-/aws-sign2-0.7.0.tgz#b46e890934a9591f2d2f6f86d7e6a9f1b3fe76a8"
@@ -806,6 +813,10 @@ cross-spawn@^5.0.1, cross-spawn@^5.1.0:
     lru-cache "^4.0.1"
     shebang-command "^1.2.0"
     which "^1.2.9"
+
+csv-reader@^1.0.3:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/csv-reader/-/csv-reader-1.0.3.tgz#0f42a50f018a511bb488438d8eacc5ebfbfb1a2b"
 
 dashdash@^1.12.0:
   version "1.14.1"
@@ -1763,7 +1774,7 @@ http-signature@~1.2.0:
     jsprim "^1.2.2"
     sshpk "^1.7.0"
 
-iconv-lite@0.4.23, iconv-lite@^0.4.17, iconv-lite@^0.4.22, iconv-lite@^0.4.4:
+iconv-lite@0.*, iconv-lite@0.4.23, iconv-lite@^0.4.17, iconv-lite@^0.4.22, iconv-lite@^0.4.4:
   version "0.4.23"
   resolved "https://registry.yarnpkg.com/iconv-lite/-/iconv-lite-0.4.23.tgz#297871f63be507adcfbfca715d0cd0eed84e9a63"
   dependencies:
@@ -2141,6 +2152,10 @@ js-yaml@3.x, js-yaml@^3.9.1:
 jsbn@~0.1.0:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/jsbn/-/jsbn-0.1.1.tgz#a5e654c2e5a2deb5f201d96cefbca80c0ef2f513"
+
+jschardet@1.*:
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/jschardet/-/jschardet-1.6.0.tgz#c7d1a71edcff2839db2f9ec30fc5d5ebd3c1a678"
 
 jsesc@^2.5.1:
   version "2.5.1"

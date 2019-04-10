@@ -9,7 +9,7 @@ const cookieParser = require('cookie-parser');
 const Auth0Strategy = require('passport-auth0');
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
-
+const roles = require('./utils/roles');
 const routes = require('./routes/');
 
 function ignoreFavicon(req, res, next) {
@@ -61,7 +61,11 @@ passport.use(
 );
 
 passport.use(
-  new JwtStrategy(strategyOpts, (jwtPayload, done) => done(null, jwtPayload)),
+  new JwtStrategy(strategyOpts, (jwtPayload, done) => {
+    roles.getRole(jwtPayload.email).then(role => {
+      done(null, {...jwtPayload, role})
+    });
+  }),
 );
 
 passport.serializeUser((user, done) => {

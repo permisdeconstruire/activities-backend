@@ -26,13 +26,11 @@ function getRole(email) {
 
 function isRole(req, res, next, role) {
   if (req.user) {
-    getRole(req.user.email).then(uRole => {
-      if (uRole === role) {
-        next();
-      } else {
-        res.status(401).json({});
-      }
-    });
+    if (req.user.role === role) {
+      next();
+    } else {
+      res.status(401).json({});
+    }
   } else {
     res.status(401).json({});
   }
@@ -47,6 +45,7 @@ function isAdmin(req, res, next) {
 }
 
 module.exports = {
+  getRole,
   isPilote,
   isAdmin,
 };

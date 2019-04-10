@@ -3,8 +3,35 @@ const ObjectID = require('mongodb').ObjectID;
 
 const url = process.env.MONGODB_URL;
 
+const adminListActivities = async (req, res) => {
+  try {
+    const activities = await listActivitiesDb();
+    res.json(activities);
+  } catch(err) {
+    console.log(err);
+    res.json(500, 'Error');
+  }
+};
+
 const listActivities = async (req, res) => {
-  MongoClient.connect(
+  try {
+    const activities = await listActivitiesDb();
+    res.json(activities
+      .filter(activity => activity.published)
+      .map(activity => {
+        const newActivity = activity;
+        delete newActivity.cost;
+        delete newActivity.estimated;
+        return newActivity;
+    }))
+  } catch(err) {
+    console.log(err);
+    res.json(500, 'Error');
+  }
+};
+
+const listActivitiesDb = async () => {
+  return MongoClient.connect(
     url,
     { useNewUrlParser: true },
   )
@@ -13,13 +40,6 @@ const listActivities = async (req, res) => {
       const activitiesColl = db.collection('activities');
       return activitiesColl.find().toArray();
     })
-    .then(activities => {
-      res.json(activities);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
-    });
 };
 
 const newActivity = async (req, res) => {
@@ -124,6 +144,7 @@ const deleteActivity = async (req, res) => {
 module.exports = {
   create: router => {
     router.get('/activities', listActivities);
+    router.get('/admin/activities', adminListActivities);
     router.post('/admin/activities', newActivity);
     router.put('/admin/activities/id/:id', editActivity);
     router.put('/pilote/activities/id/:id', registerActivity);
