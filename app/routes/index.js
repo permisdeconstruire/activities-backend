@@ -5,6 +5,7 @@ const activities = require('./activities');
 const forms = require('./forms');
 const users = require('./users');
 const pedagogy = require('./pedagogy');
+const events = require('./events');
 const roles = require('../utils/roles');
 
 const tokenOptions = {};
@@ -71,5 +72,6 @@ activities.create(router);
 forms.create(router);
 users.create(router);
 pedagogy.create(router);
+events.create(router);
 
 module.exports = router;

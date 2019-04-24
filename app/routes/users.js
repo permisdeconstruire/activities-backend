@@ -1,5 +1,6 @@
 const MongoClient = require('mongodb').MongoClient;
 const ObjectID = require('mongodb').ObjectID;
+const event = require('../utils/event');
 
 const url = process.env.MONGODB_URL;
 
@@ -48,13 +49,28 @@ const newUser = async (req, res, role) => {
 };
 
 const editUser = async (req, res, role) => {
+  let usersColl;
   MongoClient.connect(
     url,
     { useNewUrlParser: true },
   )
     .then(client => {
       const db = client.db('permisdeconstruire');
-      const usersColl = db.collection('users');
+      usersColl = db.collection('users');
+      return usersColl.findOne({ _id: new ObjectID(req.params.id) });
+    })
+    .then(oldUser => {
+      const eventPromises = []
+      Object.keys(req.body).forEach(field => {
+        if(typeof(oldUser[field]) === 'undefined') {
+          eventPromises.push(event.fire(req.body.email, 'profileUpdate', '', {field, newValue: req.body[field]}))
+        } else if(oldUser[field] !== req.body[field]) {
+          eventPromises.push(event.fire(req.body.email, 'profileUpdate', '', {field, oldValue: oldUser[field], newValue: req.body[field]}))
+        }
+      })
+      return Promise.all(eventPromises);
+    })
+    .then(() => {
       if (typeof role !== 'undefined') {
         return usersColl.updateOne(
           { _id: new ObjectID(req.params.id) },

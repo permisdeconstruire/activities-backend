@@ -1,5 +1,6 @@
 const MongoClient = require('mongodb').MongoClient;
 const ObjectID = require('mongodb').ObjectID;
+const event = require('../utils/event');
 
 const url = process.env.MONGODB_URL;
 
@@ -94,16 +95,18 @@ const registerActivity = async (req, res) => {
       activitiesColl = db.collection('activities');
       return activitiesColl.findOne({ _id: new ObjectID(req.params.id) });
     })
-    .then(rActivity => {
+    .then(async (rActivity) => {
       const activity = rActivity;
       if (typeof activity.participants === 'undefined') {
         activity.participants = [];
       }
       if (req.body.action === 'register') {
+        await event.fire(req.user.email, 'application', 'activity', '', {...activity, subType: 'register'})
         if (activity.participants.indexOf(req.user.email) === -1) {
           activity.participants.push(req.user.email);
         }
       } else {
+        await event.fire(req.user.email, 'application', 'activity', req.body.justification, {...activity, subType: 'unregister'})
         const participantIndex = activity.participants.indexOf(req.user.email);
         activity.participants.splice(participantIndex, 1);
       }
