@@ -60,13 +60,15 @@ router.get(
   '/whoami',
   passport.authenticate('jwt', { session: false }),
   (req, res) => {
-    res.json({ user: req.user });
+    res.json(req.user);
   },
 );
 
 router.get('/status', (req, res) => {
   res.json({ message: 'API OK' });
 });
+
+router.get('/cooperators', roles.listCooperators);
 
 activities.create(router);
 forms.create(router);

@@ -1,85 +1,52 @@
-const MongoClient = require('mongodb').MongoClient;
 const ObjectID = require('mongodb').ObjectID;
+const mongodb = require('../utils/mongodb');
 
-const url = process.env.MONGODB_URL;
+const collection = 'pedagogy';
 
 const listPedagogy = async (req, res) => {
-  MongoClient.connect(
-    url,
-    { useNewUrlParser: true },
-  )
-    .then(client => {
-      const db = client.db('permisdeconstruire');
-      const pedagogyColl = db.collection('pedagogy');
-      return pedagogyColl.find().toArray();
-    })
-    .then(pedagogy => {
-      res.json(pedagogy);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
-    });
+  try {
+    const pedagogy = await mongodb.find(collection);
+    res.json(pedagogy);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
 };
 
 const newPedagogy = async (req, res) => {
-  MongoClient.connect(
-    url,
-    { useNewUrlParser: true },
-  )
-    .then(client => {
-      const db = client.db('permisdeconstruire');
-      const pedagogyColl = db.collection('pedagogy');
-      return pedagogyColl.insertOne(req.body);
-    })
-    .then(pedagogy => {
-      res.json(pedagogy.insertedId);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
-    });
+  try {
+    const { insertedId } = await mongodb.insertOne(collection, req.body);
+    res.json(insertedId);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
 };
 
 const editPedagogy = async (req, res) => {
-  MongoClient.connect(
-    url,
-    { useNewUrlParser: true },
-  )
-    .then(client => {
-      const db = client.db('permisdeconstruire');
-      const pedagogyColl = db.collection('pedagogy');
-      return pedagogyColl.updateOne(
-        { _id: new ObjectID(req.params.id) },
-        { $set: req.body },
-      );
-    })
-    .then(pedagogy => {
-      res.json(pedagogy.result);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
-    });
+  try {
+    const { result } = await mongodb.updateOne(
+      collection,
+      { _id: new ObjectID(req.params.id) },
+      { $set: req.body },
+    );
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
 };
 
 const deletePedagogy = async (req, res) => {
-  MongoClient.connect(
-    url,
-    { useNewUrlParser: true },
-  )
-    .then(client => {
-      const db = client.db('permisdeconstruire');
-      const pedagogyColl = db.collection('pedagogy');
-      return pedagogyColl.deleteOne({ _id: new ObjectID(req.params.id) });
-    })
-    .then(pedagogy => {
-      res.json(pedagogy.result);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
+  try {
+    const { result } = mongodb.deleteOne(collection, {
+      _id: new ObjectID(req.params.id),
     });
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
 };
 
 module.exports = {

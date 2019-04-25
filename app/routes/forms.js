@@ -1,104 +1,62 @@
-const MongoClient = require('mongodb').MongoClient;
 const ObjectID = require('mongodb').ObjectID;
+const mongodb = require('../utils/mongodb');
 
-const url = process.env.MONGODB_URL;
+const collection = 'forms';
 
 const listForms = async (req, res) => {
-  MongoClient.connect(
-    url,
-    { useNewUrlParser: true },
-  )
-    .then(client => {
-      const db = client.db('permisdeconstruire');
-      const formsColl = db.collection('forms');
-      return formsColl.find().toArray();
-    })
-    .then(forms => {
-      res.json(forms);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
-    });
+  try {
+    const forms = await mongodb.find(collection);
+    res.json(forms);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
 };
 
 const newForm = async (req, res) => {
-  MongoClient.connect(
-    url,
-    { useNewUrlParser: true },
-  )
-    .then(client => {
-      const db = client.db('permisdeconstruire');
-      const formsColl = db.collection('forms');
-      return formsColl.insertOne(req.body);
-    })
-    .then(form => {
-      res.json(form.insertedId);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
-    });
+  try {
+    const { insertedId } = await mongodb.insertOne(collection, req.body);
+    res.json(insertedId);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
 };
 
 const editForm = async (req, res) => {
-  MongoClient.connect(
-    url,
-    { useNewUrlParser: true },
-  )
-    .then(client => {
-      const db = client.db('permisdeconstruire');
-      const formsColl = db.collection('forms');
-      return formsColl.updateOne(
-        { _id: new ObjectID(req.params.id) },
-        { $set: req.body },
-      );
-    })
-    .then(form => {
-      res.json(form.result);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
-    });
+  try {
+    const { result } = await mongodb.updateOne(
+      collection,
+      { _id: new ObjectID(req.params.id) },
+      { $set: req.body },
+    );
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
 };
 
 const getForm = async (req, res) => {
-  MongoClient.connect(
-    url,
-    { useNewUrlParser: true },
-  )
-    .then(client => {
-      const db = client.db('permisdeconstruire');
-      const formsColl = db.collection('forms');
-      return formsColl.findOne({ title: req.params.title });
-    })
-    .then(form => {
-      res.json(form);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
-    });
+  try {
+    const form = await mongodb.findOne(collection, { title: req.params.title });
+    res.json(form);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
 };
 
 const deleteForm = async (req, res) => {
-  MongoClient.connect(
-    url,
-    { useNewUrlParser: true },
-  )
-    .then(client => {
-      const db = client.db('permisdeconstruire');
-      const formsColl = db.collection('forms');
-      return formsColl.deleteOne({ _id: new ObjectID(req.params.id) });
-    })
-    .then(form => {
-      res.json(form.result);
-    })
-    .catch(err => {
-      console.log(err);
-      res.json(500, 'Error');
+  try {
+    const { result } = mongodb.deleteOne(collection, {
+      _id: new ObjectID(req.params.id),
     });
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
 };
 
 module.exports = {

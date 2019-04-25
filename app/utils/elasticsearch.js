@@ -1,4 +1,4 @@
-const { Client } = require('@elastic/elasticsearch')
+const { Client } = require('@elastic/elasticsearch');
 
 const connectElasticsearch = () =>
   new Client({
