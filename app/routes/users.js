@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const ObjectID = require('mongodb').ObjectID;
 const mongodb = require('../utils/mongodb');
 const event = require('../utils/event');
@@ -14,7 +15,14 @@ const listUsers = async (req, res, collection) => {
 
 const newUser = async (req, res, collection) => {
   try {
-    const { insertedId } = await mongodb.insertOne(collection, req.body);
+    const pedagogy = await mongodb.find('pedagogy');
+    const categories = _.uniqBy(pedagogy, 'category').map(p => p.category);
+    const levels = {}
+    categories.forEach(category => {
+      levels[category] = 0;
+    })
+
+    const { insertedId } = await mongodb.insertOne(collection, {...req.body, levels});
     res.json(insertedId);
   } catch (err) {
     console.error(err);
