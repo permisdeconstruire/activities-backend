@@ -95,12 +95,33 @@ const deletePilote = async (req, res) => {
   deleteUser(req, res, 'pilotes');
 };
 
+const listCooperators = async (req, res) => {
+  listUsers(req, res, 'cooperators');
+};
+
+const newCooperator = async (req, res) => {
+  newUser(req, res, 'cooperators');
+};
+
+const editCooperator = async (req, res) => {
+  editUser(req, res, 'cooperators');
+};
+
+const deleteCooperator = async (req, res) => {
+  deleteUser(req, res, 'cooperators');
+};
+
 module.exports = {
   create: router => {
     router.get('/admin/pilotes', listPilotes);
     router.post('/admin/pilotes', newPilote);
     router.put('/admin/pilotes/id/:id', editPilote);
     router.delete('/admin/pilotes/id/:id', deletePilote);
+
+    router.get('/admin/cooperators', listCooperators);
+    router.post('/admin/cooperators', newCooperator);
+    router.put('/admin/cooperators/id/:id', editCooperator);
+    router.delete('/admin/cooperators/id/:id', deleteCooperator);
 
     router.get('/admin/users', listUsers);
     router.post('/admin/users', newUser);
