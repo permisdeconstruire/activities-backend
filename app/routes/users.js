@@ -15,15 +15,19 @@ const listUsers = async (req, res, collection) => {
 
 const newUser = async (req, res, collection) => {
   try {
-    const pedagogy = await mongodb.find('pedagogy');
-    const categories = _.uniqBy(pedagogy, 'category').map(p => p.category);
-    const levels = {}
-    categories.forEach(category => {
-      levels[category] = 0;
-    })
-
-    const { insertedId } = await mongodb.insertOne(collection, {...req.body, levels});
-    res.json(insertedId);
+    if(collection === 'pilotes') {
+      const pedagogy = await mongodb.find('pedagogy');
+      const categories = _.uniqBy(pedagogy, 'category').map(p => p.category);
+      const levels = {}
+      categories.forEach(category => {
+        levels[category] = 0;
+      })
+      const { insertedId } = await mongodb.insertOne(collection, {...req.body, levels});
+      res.json(insertedId);
+    } else {
+      const { insertedId } = await mongodb.insertOne(collection, req.body);
+      res.json(insertedId);
+    }
   } catch (err) {
     console.error(err);
     res.json(500, 'Error');
