@@ -44,7 +44,7 @@ const editUser = async (req, res, collection) => {
       if (typeof oldUser[field] === 'undefined') {
         if(collection === 'pilotes') {
           eventPromises.push(
-            event.fire(req.body.email, 'profileUpdate', '', {
+            event.fire(req.body.email, req.user.email, 'profileUpdate', '', {
               field,
               newValue: req.body[field],
             }),
@@ -53,7 +53,7 @@ const editUser = async (req, res, collection) => {
       } else if (oldUser[field] !== req.body[field]) {
         if(collection === 'pilotes') {
           eventPromises.push(
-            event.fire(req.body.email, 'profileUpdate', '', {
+            event.fire(req.body.email, req.user.email, 'profileUpdate', '', {
               field,
               oldValue: oldUser[field],
               newValue: req.body[field],
