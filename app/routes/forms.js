@@ -39,7 +39,7 @@ const editForm = async (req, res) => {
 
 const getForm = async (req, res) => {
   try {
-    const form = await mongodb.findOne(collection, { title: req.params.title });
+    const form = await mongodb.findOne(collection, { type: req.params.type, title: req.params.title });
     res.json(form);
   } catch (err) {
     console.error(err);
@@ -64,7 +64,7 @@ module.exports = {
     router.get('/admin/forms', listForms);
     router.post('/admin/forms', newForm);
     router.put('/admin/forms/id/:id', editForm);
-    router.get('/forms/title/:title', getForm);
+    router.get('/forms/title/:type/:title', getForm);
     router.delete('/admin/forms/id/:id', deleteForm);
   },
 };

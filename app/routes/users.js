@@ -42,20 +42,24 @@ const editUser = async (req, res, collection) => {
     const eventPromises = [];
     Object.keys(req.body).forEach(field => {
       if (typeof oldUser[field] === 'undefined') {
-        eventPromises.push(
-          event.fire(req.body.email, 'profileUpdate', '', {
-            field,
-            newValue: req.body[field],
-          }),
-        );
+        if(collection === 'pilotes') {
+          eventPromises.push(
+            event.fire(req.body.email, 'profileUpdate', '', {
+              field,
+              newValue: req.body[field],
+            }),
+          );
+        }
       } else if (oldUser[field] !== req.body[field]) {
-        eventPromises.push(
-          event.fire(req.body.email, 'profileUpdate', '', {
-            field,
-            oldValue: oldUser[field],
-            newValue: req.body[field],
-          }),
-        );
+        if(collection === 'pilotes') {
+          eventPromises.push(
+            event.fire(req.body.email, 'profileUpdate', '', {
+              field,
+              oldValue: oldUser[field],
+              newValue: req.body[field],
+            }),
+          );
+        }
       }
     });
     await Promise.all(eventPromises);
