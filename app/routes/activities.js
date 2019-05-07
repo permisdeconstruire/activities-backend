@@ -1,3 +1,4 @@
+const moment = require('moment');
 const ObjectID = require('mongodb').ObjectID;
 const mongodb = require('../utils/mongodb');
 const event = require('../utils/event');
@@ -6,7 +7,7 @@ const collection = 'activities';
 
 const adminListActivities = async (req, res) => {
   try {
-    const activities = await mongodb.find(collection);
+    const activities = await listActivities();
     res.json(activities);
   } catch (err) {
     console.error(err);
@@ -14,9 +15,9 @@ const adminListActivities = async (req, res) => {
   }
 };
 
-const listActivities = async (req, res) => {
+const piloteListActivities = async (req, res) => {
   try {
-    const activities = await mongodb.find(collection);
+    const activities = await listActivities();
     res.json(
       activities
         .filter(activity => activity.published)
@@ -24,6 +25,38 @@ const listActivities = async (req, res) => {
           const newActivity = activity;
           delete newActivity.cost;
           delete newActivity.estimated;
+          return newActivity;
+        }),
+    );
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
+};
+
+const listActivities = async () => {
+  const activities = await mongodb.find(collection);
+  activities.sort((a, b) => {
+    if(moment(a.start).isBefore(moment(b.start))) {
+      return 1;
+    } else {
+      return -1;
+    }
+  });
+  return activities;
+};
+
+const publicListActivities = async (req, res) => {
+  try {
+    const activities = await listActivities();
+    res.json(
+      activities
+        .filter(activity => activity.published)
+        .map(activity => {
+          const newActivity = activity;
+          delete newActivity.cost;
+          delete newActivity.estimated;
+          delete newActivity.participants;
           return newActivity;
         }),
     );
@@ -65,24 +98,28 @@ const registerActivity = async (req, res) => {
     if (typeof activity.participants === 'undefined') {
       activity.participants = [];
     }
+
+    const participantIndex = activity.participants.findIndex(participant => participant._id === req.user.roles.pilote);
     if (req.body.action === 'register') {
-      await event.fire(req.user.email, 'application', 'activity', '', {
+      if(participantIndex === -1){
+        activity.participants.push({_id: req.user.roles.pilote, pseudo: req.user.pseudo})
+      }
+      await event.fire({_id: req.user.roles.pilote, pseudo: req.user.pseudo}, {_id: 'application'}, 'activity', '', {
         ...activity,
         subType: 'register',
       });
-      if (activity.participants.indexOf(req.user.email) === -1) {
-        activity.participants.push(req.user.email);
-      }
+
     } else {
+      if(participantIndex !== -1) {
+        activity.participants.splice(participantIndex, 1);
+      }
       await event.fire(
-        req.user.email,
-        'application',
+        {_id: req.user.roles.pilote, pseudo: req.user.pseudo},
+        {_id: 'application'},
         'activity',
         req.body.justification,
         { ...activity, subType: 'unregister' },
       );
-      const participantIndex = activity.participants.indexOf(req.user.email);
-      activity.participants.splice(participantIndex, 1);
     }
 
     const { result } = await mongodb.updateOne(
@@ -111,7 +148,8 @@ const deleteActivity = async (req, res) => {
 
 module.exports = {
   create: router => {
-    router.get('/activities', listActivities);
+    router.get('/activities', publicListActivities);
+    router.get('/pilote/activities', piloteListActivities);
     router.get('/admin/activities', adminListActivities);
     router.post('/admin/activities', newActivity);
     router.put('/admin/activities/id/:id', editActivity);

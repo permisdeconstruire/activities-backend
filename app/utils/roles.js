@@ -3,7 +3,7 @@ const mongodb = require('./mongodb');
 const collections = ['pilotes', 'copilotes', 'cooperators'];
 
 const getUserInfo = async email => {
-  const userInfo = { roles: [] };
+  const userInfo = { roles: {} };
   try {
     const userPromises = collections.map(collection =>
       mongodb.findOne(collection, { email }),
@@ -11,11 +11,13 @@ const getUserInfo = async email => {
     const users = await Promise.all(userPromises);
     users.forEach((user, i) => {
       if (user !== null) {
-        userInfo.roles.push(
-          collections[i].substring(0, collections[i].length - 1),
-        );
-        if (collections[i] === 'pilotes') {
+        const roleName = collections[i].substring(0, collections[i].length - 1);
+        userInfo.roles[roleName] = user._id.toString();
+        if (roleName === 'pilote') {
           userInfo.levels = user.levels;
+          userInfo.pseudo = user.pseudo;
+        } else if(roleName === 'cooperator') {
+          userInfo.titre = user.titre;
         }
       }
     });
@@ -27,7 +29,7 @@ const getUserInfo = async email => {
 
 function isRole(req, res, next, role) {
   if (req.user) {
-    if (req.user.roles.indexOf(role) !== -1) {
+    if (Object.keys(req.user.roles).indexOf(role) !== -1) {
       next();
     } else {
       res.status(401).json({});

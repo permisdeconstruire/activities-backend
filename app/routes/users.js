@@ -22,8 +22,12 @@ const newUser = async (req, res, collection) => {
       categories.forEach(category => {
         levels[category] = 0;
       })
-      const { insertedId } = await mongodb.insertOne(collection, {...req.body, levels});
+      const pseudo = `${req.body['prenom']} ${req.body['nom']}`;
+      const { insertedId } = await mongodb.insertOne(collection, {...req.body, levels, pseudo});
       res.json(insertedId);
+    } else if(collection === 'cooperators'){
+      const titre = `${req.body['prenom']} ${req.body['nom']}, ${req.body['fonction']}`;
+      const { insertedId } = await mongodb.insertOne(collection, {...req.body, titre});
     } else {
       const { insertedId } = await mongodb.insertOne(collection, req.body);
       res.json(insertedId);
@@ -44,7 +48,7 @@ const editUser = async (req, res, collection) => {
       if (typeof oldUser[field] === 'undefined') {
         if(collection === 'pilotes') {
           eventPromises.push(
-            event.fire(req.body.email, req.user.email, 'profileUpdate', '', {
+            event.fire({_id: req.params.id, pseudo: req.body.pseudo}, {_id: req.user.roles.copilote, email: req.user.email}, 'profileUpdate', '', {
               field,
               newValue: req.body[field],
             }),
@@ -53,7 +57,7 @@ const editUser = async (req, res, collection) => {
       } else if (oldUser[field] !== req.body[field]) {
         if(collection === 'pilotes') {
           eventPromises.push(
-            event.fire(req.body.email, req.user.email, 'profileUpdate', '', {
+            event.fire({_id: req.params.id, pseudo: req.body.pseudo}, {_id: req.user.roles.copilote, email: req.user.email}, 'profileUpdate', '', {
               field,
               oldValue: oldUser[field],
               newValue: req.body[field],
@@ -63,12 +67,31 @@ const editUser = async (req, res, collection) => {
       }
     });
     await Promise.all(eventPromises);
-    const { result } = await mongodb.updateOne(
-      collection,
-      { _id: new ObjectID(req.params.id) },
-      { $set: req.body },
-    );
-    res.json(result);
+    if(collection === 'cooperators' && req.body.titre === '') {
+      const titre = `${req.body['prenom']} ${req.body['nom']}, ${req.body['fonction']}`;
+      const { result } = await mongodb.updateOne(
+        collection,
+        { _id: new ObjectID(req.params.id) },
+        { $set: {...req.body, titre} },
+      );
+      res.json(result);
+    } else if(collection === 'pilotes' && req.body.pseudo === ''){
+      const pseudo = `${req.body['prenom']} ${req.body['nom']}`;
+      const { result } = await mongodb.updateOne(
+        collection,
+        { _id: new ObjectID(req.params.id) },
+        { $set: {...req.body, pseudo} },
+      );
+      res.json(result);
+    } else {
+      const { result } = await mongodb.updateOne(
+        collection,
+        { _id: new ObjectID(req.params.id) },
+        { $set: req.body },
+      );
+      res.json(result);
+    }
+
   } catch (err) {
     console.error(err);
     res.json(500, 'Error');
