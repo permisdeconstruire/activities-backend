@@ -23,6 +23,14 @@ const piloteListActivities = async (req, res) => {
         .filter(activity => activity.published)
         .map(activity => {
           const newActivity = activity;
+          if(typeof(newActivity.participants) !== 'undefined') {
+            newActivity.participants = newActivity.participants.map(participant => {
+              const newParticipant = participant;
+              delete newParticipant.pedagogy;
+              return newParticipant;
+            });
+          }
+
           delete newActivity.cost;
           delete newActivity.estimated;
           return newActivity;
@@ -99,35 +107,39 @@ const registerActivity = async (req, res) => {
       activity.participants = [];
     }
 
-    const participantIndex = activity.participants.findIndex(participant => participant._id === req.user.roles.pilote);
-    if (req.body.action === 'register') {
-      if(participantIndex === -1){
-        activity.participants.push({_id: req.user.roles.pilote, pseudo: req.user.pseudo})
-      }
-      await event.fire({_id: req.user.roles.pilote, pseudo: req.user.pseudo}, {_id: 'application'}, 'activity', '', {
-        ...activity,
-        subType: 'register',
-      });
+    if(['Fermeture', 'Autonomie', 'Individuelle'].indexOf(activity.status) === -1) {
+      const participantIndex = activity.participants.findIndex(participant => participant._id === req.user.roles.pilote);
+      if (req.body.action === 'register') {
+        if(participantIndex === -1){
+          activity.participants.push({_id: req.user.roles.pilote, pseudo: req.user.pseudo, pedagogy: req.body.pedagogy})
+        }
+        await event.fire({_id: req.user.roles.pilote, pseudo: req.user.pseudo}, {_id: 'application'}, 'activity', '', {
+          ...activity,
+          subType: 'register',
+        });
 
-    } else {
-      if(participantIndex !== -1) {
-        activity.participants.splice(participantIndex, 1);
+      } else {
+        if(participantIndex !== -1) {
+          activity.participants.splice(participantIndex, 1);
+        }
+        await event.fire(
+          {_id: req.user.roles.pilote, pseudo: req.user.pseudo},
+          {_id: 'application'},
+          'activity',
+          req.body.justification,
+          { ...activity, subType: 'unregister' },
+        );
       }
-      await event.fire(
-        {_id: req.user.roles.pilote, pseudo: req.user.pseudo},
-        {_id: 'application'},
-        'activity',
-        req.body.justification,
-        { ...activity, subType: 'unregister' },
+
+      const { result } = await mongodb.updateOne(
+        collection,
+        { _id: new ObjectID(req.params.id) },
+        { $set: activity },
       );
+      res.json(result);
+    } else {
+      res.status(403).json('Impossible');
     }
-
-    const { result } = await mongodb.updateOne(
-      collection,
-      { _id: new ObjectID(req.params.id) },
-      { $set: activity },
-    );
-    res.json(result);
   } catch (err) {
     console.error(err);
     res.json(500, 'Error');
@@ -136,7 +148,7 @@ const registerActivity = async (req, res) => {
 
 const deleteActivity = async (req, res) => {
   try {
-    const { result } = mongodb.deleteOne(collection, {
+    const { result } = await mongodb.deleteOne(collection, {
       _id: new ObjectID(req.params.id),
     });
     res.json(result);

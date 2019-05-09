@@ -28,6 +28,7 @@ const newUser = async (req, res, collection) => {
     } else if(collection === 'cooperators'){
       const titre = `${req.body['prenom']} ${req.body['nom']}, ${req.body['fonction']}`;
       const { insertedId } = await mongodb.insertOne(collection, {...req.body, titre});
+      res.json(insertedId);
     } else {
       const { insertedId } = await mongodb.insertOne(collection, req.body);
       res.json(insertedId);
@@ -54,13 +55,13 @@ const editUser = async (req, res, collection) => {
             }),
           );
         }
-      } else if (oldUser[field] !== req.body[field]) {
+      } else if (oldUser[field].toString() !== req.body[field].toString()) {
         if(collection === 'pilotes') {
           eventPromises.push(
             event.fire({_id: req.params.id, pseudo: req.body.pseudo}, {_id: req.user.roles.copilote, email: req.user.email}, 'profileUpdate', '', {
               field,
-              oldValue: oldUser[field],
-              newValue: req.body[field],
+              oldValue: oldUser[field].toString(),
+              newValue: req.body[field].toString(),
             }),
           );
         }
@@ -100,7 +101,7 @@ const editUser = async (req, res, collection) => {
 
 const deleteUser = async (req, res, collection) => {
   try {
-    const { result } = mongodb.deleteOne(collection, {
+    const { result } = await mongodb.deleteOne(collection, {
       _id: new ObjectID(req.params.id),
     });
     res.json(result);

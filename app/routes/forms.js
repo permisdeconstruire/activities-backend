@@ -49,7 +49,7 @@ const getForm = async (req, res) => {
 
 const deleteForm = async (req, res) => {
   try {
-    const { result } = mongodb.deleteOne(collection, {
+    const { result } = await mongodb.deleteOne(collection, {
       _id: new ObjectID(req.params.id),
     });
     res.json(result);
