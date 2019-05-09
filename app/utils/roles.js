@@ -18,6 +18,9 @@ const getUserInfo = async email => {
           userInfo.pseudo = user.pseudo;
         } else if(roleName === 'cooperator') {
           userInfo.titre = user.titre;
+          userInfo.pseudo = `${user.prenom} ${user.nom}`;
+        } else {
+          userInfo.pseudo = `${user.prenom} ${user.nom}`;
         }
       }
     });
