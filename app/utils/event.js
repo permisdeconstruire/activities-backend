@@ -16,9 +16,20 @@ async function fire(pilote, source, type, comment, data, forgeId = false) {
     _id: new ObjectID(pilote._id),
   });
 
-  const photoPilote = {_id: pilote._id}
+  const photoPilote = {_id: pilote._id, pseudo: pilote.pseudo}
 
-  Object.keys(fullPilote).filter(key => key.startsWith(photoPrefix)).forEach(key => photoPilote[key.substr(photoPrefix.length)] = fullPilote[key]);
+  Object.keys(fullPilote).filter(key => key.startsWith(photoPrefix)).forEach(key => {
+    if(key.startsWith(`${photoPrefix}date`)){
+      if(moment(fullPilote[key]).isValid()){
+        photoPilote[key.substr(photoPrefix.length)] = fullPilote[key]
+      } else {
+        photoPilote[key.substr(photoPrefix.length)] = moment('2000-01-01');
+      }
+    } else {
+      photoPilote[key.substr(photoPrefix.length)] = fullPilote[key]
+    }
+
+  });
 
   const event = {
     date,

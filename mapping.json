@@ -1,0 +1,35 @@
+{
+    "mappings": {
+        "dynamic_templates": [
+            {
+                "strings_as_keywords": {
+                    "mapping": {
+                        "type": "keyword"
+                    },
+                    "match_mapping_type": "string"
+                }
+            }
+        ],
+        "properties": {
+            "comment": {
+                "type": "text"
+            },
+            "data": {
+                "properties": {
+                    "annotation": {
+                        "type": "text"
+                    },
+                    "justificatif": {
+                        "type": "text"
+                    },
+                    "oldValue": {
+                        "type": "keyword"
+                    },
+                    "newValue": {
+                        "type": "keyword"
+                    }
+                }
+            }
+        }
+    }
+}

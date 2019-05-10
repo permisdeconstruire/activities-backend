@@ -114,7 +114,7 @@ const registerActivity = async (req, res) => {
           activity.participants.push({_id: req.user.roles.pilote, pseudo: req.user.pseudo, pedagogy: req.body.pedagogy})
         }
         await event.fire({_id: req.user.roles.pilote, pseudo: req.user.pseudo}, {_id: 'application'}, 'activity', '', {
-          ...activity,
+          activity,
           subType: 'register',
         });
 
@@ -127,7 +127,7 @@ const registerActivity = async (req, res) => {
           {_id: 'application'},
           'activity',
           req.body.justification,
-          { ...activity, subType: 'unregister' },
+          { activity, subType: 'unregister' },
         );
       }
 
