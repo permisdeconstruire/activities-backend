@@ -6,13 +6,8 @@ const elasticsearch = require('./elasticsearch');
 
 const PDC_NAMESPACE = '7065726d-6973-6465-636f-6e7374727569';
 
-async function fire(pilote, source, type, comment, data, {date, forgeId = false}) {
+async function fire(pilote, source, type, comment, data, {date = moment().toISOString(), forgeId = false} = {}) {
   const params = {};
-  let pickedDate = date;
-  if(typeof(pickedDate) === 'undefined'){
-    pickedDate = moment().toISOString();
-  }
-
   const photoPrefix = 'ph_';
 
   const fullPilote = await mongodb.findOne('pilotes', {
@@ -35,7 +30,7 @@ async function fire(pilote, source, type, comment, data, {date, forgeId = false}
   });
 
   const event = {
-    date: pickedDate,
+    date,
     type,
     comment,
     pilote: photoPilote,
