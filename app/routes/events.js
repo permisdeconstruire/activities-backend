@@ -8,6 +8,7 @@ const newEvent = async (req, res) => {
       req.body.type,
       req.body.comment,
       req.body.data,
+      {date: req.body.date},
     );
     res.json('OK');
   } catch (err) {
