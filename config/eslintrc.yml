@@ -6,6 +6,8 @@ extends:
   - "plugin:prettier/recommended"
 
 rules:
+  no-underscore-dangle: off
+  no-await-in-loop: off
   prefer-destructuring: off
   prettier/prettier:
     - error

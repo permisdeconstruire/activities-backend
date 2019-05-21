@@ -4,11 +4,11 @@ const newEvent = async (req, res) => {
   try {
     await event.fire(
       req.body.pilote,
-      {_id: req.user.roles.copilote, email: req.user.email},
+      { _id: req.user.roles.copilote, email: req.user.email },
       req.body.type,
       req.body.comment,
       req.body.data,
-      {date: req.body.date},
+      { date: req.body.date },
     );
     res.json('OK');
   } catch (err) {

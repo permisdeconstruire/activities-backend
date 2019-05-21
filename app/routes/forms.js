@@ -39,7 +39,10 @@ const editForm = async (req, res) => {
 
 const getForm = async (req, res) => {
   try {
-    const form = await mongodb.findOne(collection, { type: req.params.type, title: req.params.title });
+    const form = await mongodb.findOne(collection, {
+      type: req.params.type,
+      title: req.params.title,
+    });
     res.json(form);
   } catch (err) {
     console.error(err);

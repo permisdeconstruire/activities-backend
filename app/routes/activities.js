@@ -6,6 +6,17 @@ const screenshot = require('../utils/screenshot');
 
 const collection = 'activities';
 
+const listActivities = async () => {
+  const activities = await mongodb.find(collection);
+  activities.sort((a, b) => {
+    if (moment(a.start).isBefore(moment(b.start))) {
+      return 1;
+    }
+    return -1;
+  });
+  return activities;
+};
+
 const adminListActivities = async (req, res) => {
   try {
     const activities = await listActivities();
@@ -24,12 +35,14 @@ const piloteListActivities = async (req, res) => {
         .filter(activity => activity.published)
         .map(activity => {
           const newActivity = activity;
-          if(typeof(newActivity.participants) !== 'undefined') {
-            newActivity.participants = newActivity.participants.map(participant => {
-              const newParticipant = participant;
-              delete newParticipant.pedagogy;
-              return newParticipant;
-            });
+          if (typeof newActivity.participants !== 'undefined') {
+            newActivity.participants = newActivity.participants.map(
+              participant => {
+                const newParticipant = participant;
+                delete newParticipant.pedagogy;
+                return newParticipant;
+              },
+            );
           }
 
           delete newActivity.cost;
@@ -43,28 +56,15 @@ const piloteListActivities = async (req, res) => {
   }
 };
 
-const listActivities = async () => {
-  const activities = await mongodb.find(collection);
-  activities.sort((a, b) => {
-    if(moment(a.start).isBefore(moment(b.start))) {
-      return 1;
-    } else {
-      return -1;
-    }
-  });
-  return activities;
-};
-
-const publicDownloadActivities = async(req, res) => {
+const publicDownloadActivities = async (req, res) => {
   try {
     const agenda = await screenshot();
     res.download(agenda);
-  } catch(e){
-    console.log(e)
+  } catch (e) {
+    console.log(e);
     res.json(500, 'Error');
   }
-}
-
+};
 
 const publicListActivities = async (req, res) => {
   try {
@@ -119,24 +119,37 @@ const registerActivity = async (req, res) => {
       activity.participants = [];
     }
 
-    if(['Fermeture', 'Autonomie', 'Individuelle'].indexOf(activity.status) === -1) {
-      const participantIndex = activity.participants.findIndex(participant => participant._id === req.user.roles.pilote);
+    if (
+      ['Fermeture', 'Autonomie', 'Individuelle'].indexOf(activity.status) === -1
+    ) {
+      const participantIndex = activity.participants.findIndex(
+        participant => participant._id === req.user.roles.pilote,
+      );
       if (req.body.action === 'register') {
-        if(participantIndex === -1){
-          activity.participants.push({_id: req.user.roles.pilote, pseudo: req.user.pseudo, pedagogy: req.body.pedagogy})
+        if (participantIndex === -1) {
+          activity.participants.push({
+            _id: req.user.roles.pilote,
+            pseudo: req.user.pseudo,
+            pedagogy: req.body.pedagogy,
+          });
         }
-        await event.fire({_id: req.user.roles.pilote, pseudo: req.user.pseudo}, {_id: 'application'}, 'activity', '', {
-          activity,
-          subType: 'register',
-        });
-
+        await event.fire(
+          { _id: req.user.roles.pilote, pseudo: req.user.pseudo },
+          { _id: 'application' },
+          'activity',
+          '',
+          {
+            activity,
+            subType: 'register',
+          },
+        );
       } else {
-        if(participantIndex !== -1) {
+        if (participantIndex !== -1) {
           activity.participants.splice(participantIndex, 1);
         }
         await event.fire(
-          {_id: req.user.roles.pilote, pseudo: req.user.pseudo},
-          {_id: 'application'},
+          { _id: req.user.roles.pilote, pseudo: req.user.pseudo },
+          { _id: 'application' },
           'activity',
           req.body.justification,
           { activity, subType: 'unregister' },

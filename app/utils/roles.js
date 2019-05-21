@@ -16,7 +16,7 @@ const getUserInfo = async email => {
         if (roleName === 'pilote') {
           userInfo.levels = user.levels;
           userInfo.pseudo = user.pseudo;
-        } else if(roleName === 'cooperator') {
+        } else if (roleName === 'cooperator') {
           userInfo.titre = user.titre;
         } else {
           userInfo.surnom = `${user.prenom} ${user.nom}`;
