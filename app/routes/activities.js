@@ -2,6 +2,7 @@ const moment = require('moment');
 const ObjectID = require('mongodb').ObjectID;
 const mongodb = require('../utils/mongodb');
 const event = require('../utils/event');
+const screenshot = require('../utils/screenshot');
 
 const collection = 'activities';
 
@@ -53,6 +54,17 @@ const listActivities = async () => {
   });
   return activities;
 };
+
+const publicDownloadActivities = async(req, res) => {
+  try {
+    const agenda = await screenshot();
+    res.download(agenda);
+  } catch(e){
+    console.log(e)
+    res.json(500, 'Error');
+  }
+}
+
 
 const publicListActivities = async (req, res) => {
   try {
@@ -130,7 +142,6 @@ const registerActivity = async (req, res) => {
           { activity, subType: 'unregister' },
         );
       }
-
       const { result } = await mongodb.updateOne(
         collection,
         { _id: new ObjectID(req.params.id) },
@@ -160,6 +171,7 @@ const deleteActivity = async (req, res) => {
 
 module.exports = {
   create: router => {
+    router.get('/activities.pdf', publicDownloadActivities);
     router.get('/activities', publicListActivities);
     router.get('/pilote/activities', piloteListActivities);
     router.get('/admin/activities', adminListActivities);

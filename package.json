@@ -51,6 +51,7 @@
     "passport-google-oauth20": "^1.0.0",
     "passport-jwt": "^4.0.0",
     "pm2": "^3.0.2",
+    "puppeteer": "^1.16.0",
     "uuid": "^3.3.2",
     "winston": "^3.0.0",
     "winston-error": "^1.0.1"
