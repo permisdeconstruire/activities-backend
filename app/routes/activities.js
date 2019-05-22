@@ -110,63 +110,78 @@ const editActivity = async (req, res) => {
   }
 };
 
-const registerActivity = async (req, res) => {
-  try {
-    const activity = await mongodb.findOne(collection, {
-      _id: new ObjectID(req.params.id),
-    });
-    if (typeof activity.participants === 'undefined') {
-      activity.participants = [];
-    }
-
-    if (
-      ['Fermeture', 'Autonomie', 'Individuelle'].indexOf(activity.status) === -1
-    ) {
-      const participantIndex = activity.participants.findIndex(
-        participant => participant._id === req.user.roles.pilote,
-      );
-      if (req.body.action === 'register') {
-        if (participantIndex === -1) {
-          activity.participants.push({
-            _id: req.user.roles.pilote,
-            pseudo: req.user.pseudo,
-            pedagogy: req.body.pedagogy,
-          });
-        }
-        await event.fire(
-          { _id: req.user.roles.pilote, pseudo: req.user.pseudo },
-          { _id: 'application' },
-          'activity',
-          '',
-          {
-            activity,
-            subType: 'register',
-          },
-        );
-      } else {
-        if (participantIndex !== -1) {
-          activity.participants.splice(participantIndex, 1);
-        }
-        await event.fire(
-          { _id: req.user.roles.pilote, pseudo: req.user.pseudo },
-          { _id: 'application' },
-          'activity',
-          req.body.justification,
-          { activity, subType: 'unregister' },
-        );
-      }
-      const { result } = await mongodb.updateOne(
-        collection,
-        { _id: new ObjectID(req.params.id) },
-        { $set: activity },
-      );
-      res.json(result);
-    } else {
-      res.status(403).json('Impossible');
-    }
-  } catch (err) {
+const adminRegisterActivity = async(req, res) => {
+  try{
+    const result = await registerActivity(req.params.id, req.body.pilote, {action: req.body.action, justification: '', pedagogy: []}, { _id: req.user.roles.copilote, email: req.user.email });
+    res.json(result)
+  } catch(err) {
     console.error(err);
     res.json(500, 'Error');
+  }
+}
+
+const piloteRegisterActivity = async(req, res) => {
+  try{
+    const result = await registerActivity(req.params.id, {_id: req.user.roles.pilote, pseudo: req.user.pseudo}, req.body);
+    res.json(result)
+  } catch(err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
+}
+
+const registerActivity = async (activityId, pilote, body, who = {_id: 'application'}) => {
+  const activity = await mongodb.findOne(collection, {
+    _id: new ObjectID(activityId),
+  });
+  if (typeof activity.participants === 'undefined') {
+    activity.participants = [];
+  }
+
+  if (
+    ['Fermeture', 'Autonomie', 'Individuelle'].indexOf(activity.status) === -1
+  ) {
+    const participantIndex = activity.participants.findIndex(
+      participant => participant._id === pilote._id,
+    );
+    if (body.action === 'register') {
+      if (participantIndex === -1) {
+        activity.participants.push({
+          _id: pilote._id,
+          pseudo: pilote.pseudo,
+          pedagogy: body.pedagogy,
+        });
+      }
+      await event.fire(
+        { _id: pilote._id, pseudo: pilote.pseudo },
+        who,
+        'activity',
+        '',
+        {
+          activity,
+          subType: 'register',
+        },
+      );
+    } else {
+      if (participantIndex !== -1) {
+        activity.participants.splice(participantIndex, 1);
+      }
+      await event.fire(
+        { _id: pilote._id, pseudo: pilote.pseudo },
+        who,
+        'activity',
+        body.justification,
+        { activity, subType: 'unregister' },
+      );
+    }
+    const { result } = await mongodb.updateOne(
+      collection,
+      { _id: new ObjectID(activityId) },
+      { $set: activity },
+    );
+    return result;
+  } else {
+    throw new Error("Impossible");
   }
 };
 
@@ -190,7 +205,8 @@ module.exports = {
     router.get('/admin/activities', adminListActivities);
     router.post('/admin/activities', newActivity);
     router.put('/admin/activities/id/:id', editActivity);
-    router.put('/pilote/activities/id/:id', registerActivity);
+    router.put('/pilote/activities/id/:id', piloteRegisterActivity);
+    router.put('/admin/activities/id/:id/pilote', adminRegisterActivity);
     router.delete('/admin/activities/id/:id', deleteActivity);
   },
 };
