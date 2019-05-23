@@ -27,6 +27,25 @@ const adminListActivities = async (req, res) => {
   }
 };
 
+const cooperatorListActivities = async(req, res) => {
+  try {
+    const activities = await listActivities();
+    res.json(
+      activities
+        .filter(activity => activity.published)
+        .map(activity => {
+          const newActivity = activity;
+          delete newActivity.cost;
+          delete newActivity.estimated;
+          return newActivity;
+        }),
+    );
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
+}
+
 const piloteListActivities = async (req, res) => {
   try {
     const activities = await listActivities();
@@ -130,6 +149,55 @@ const piloteRegisterActivity = async(req, res) => {
   }
 }
 
+const evaluateActivity = async(req, res) => {
+  const activity = await mongodb.findOne(collection, {
+    _id: new ObjectID(req.params.id),
+  });
+
+  if (
+    ['Fermeture', 'Autonomie', 'Individuelle'].indexOf(activity.status) === -1
+  ) {
+    if(req.body.missed === true) {
+      await event.fire(
+        {_id: req.body.pilote._id, pseudo: req.body.pilote.pseudo},
+        { _id: req.user.roles.cooperator, titre: req.user.titre },
+        'activity',
+        '',
+        {
+          activity,
+          subType: 'missed',
+        },
+        {date: activity.end, forgeId: `${req.body.pilote._id}_${req.params.id}_${activity.theme}_${activity.title}_${activity.end}`}
+      )
+    } else {
+      await event.fire(
+        {_id: req.body.pilote._id, pseudo: req.body.pilote.pseudo},
+        { _id: req.user.roles.cooperator, titre: req.user.titre },
+        'evaluation',
+        req.body.comment,
+        {...req.body.data, activity},
+        {date: activity.end, forgeId: `${req.body.pilote._id}_${req.params.id}_${req.body.data.objective}_${activity.theme}_${activity.title}_${activity.end}`}
+      )
+
+      await event.fire(
+        {_id: req.body.pilote._id, pseudo: req.body.pilote.pseudo},
+        { _id: req.user.roles.cooperator, titre: req.user.titre },
+        'activity',
+        '',
+        {
+          activity,
+          subType: 'done',
+        },
+        {date: activity.end, forgeId: `${req.body.pilote._id}_${req.params.id}_${activity.theme}_${activity.title}_${activity.end}`}
+      )
+    }
+    res.json('Ok');
+  } else {
+    res.json(403, 'Impossible');
+  }
+  res.json({})
+}
+
 const registerActivity = async (activityId, pilote, body, who = {_id: 'application'}) => {
   const activity = await mongodb.findOne(collection, {
     _id: new ObjectID(activityId),
@@ -202,6 +270,9 @@ module.exports = {
     router.get('/activities.pdf', publicDownloadActivities);
     router.get('/activities', publicListActivities);
     router.get('/pilote/activities', piloteListActivities);
+    router.get('/cooperator/activities', cooperatorListActivities);
+    router.put('/cooperator/activities/id/:id', evaluateActivity);
+
     router.get('/admin/activities', adminListActivities);
     router.post('/admin/activities', newActivity);
     router.put('/admin/activities/id/:id', editActivity);

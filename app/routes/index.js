@@ -39,6 +39,12 @@ function saveOrigin(req, res, next) {
   next();
 }
 
+router.all('/undefined', (req, res) => {
+  res.type('text/html');
+  res.status(200);
+  res.send('<script>window.history.go(-4);</script>')
+})
+
 router.get(
   '/login',
   saveOrigin,
@@ -54,6 +60,12 @@ router.all(
   '/admin/*',
   passport.authenticate('jwt', { session: false }),
   roles.isAdmin,
+);
+
+router.all(
+  '/cooperator/*',
+  passport.authenticate('jwt', { session: false }),
+  roles.isCooperator,
 );
 
 router.get(

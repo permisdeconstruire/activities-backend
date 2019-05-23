@@ -46,7 +46,7 @@ const screenshot = async () => {
     }
   }, '.rbc-today');
 
-  for (let i = 0; i < 4; i += 1) {
+  for (let i = 0; i < 6; i += 1) {
     const screenshotPdf = `/tmp/page_${i}.pdf`;
     await page.emulateMedia('screen');
     await page.pdf({

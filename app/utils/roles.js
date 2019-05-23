@@ -45,6 +45,10 @@ function isPilote(req, res, next) {
   isRole(req, res, next, 'pilote');
 }
 
+function isCooperator(req, res, next) {
+  isRole(req, res, next, 'cooperator');
+}
+
 function isAdmin(req, res, next) {
   isRole(req, res, next, 'copilote');
 }
@@ -63,5 +67,6 @@ module.exports = {
   getUserInfo,
   isPilote,
   isAdmin,
+  isCooperator,
   listCooperators,
 };

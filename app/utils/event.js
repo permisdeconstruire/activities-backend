@@ -46,10 +46,18 @@ async function fire(
     data,
   };
   if (forgeId !== false) {
-    params.id = uuidv5(
-      forgeId.reduce((acc, key) => `${acc}_${event[key]}`, ''),
-      PDC_NAMESPACE,
-    );
+    if(typeof(forgeId) === 'string') {
+      params.id = uuidv5(
+        forgeId,
+        PDC_NAMESPACE,
+      );
+    } else {
+      params.id = uuidv5(
+        forgeId.reduce((acc, key) => `${acc}_${event[key]}`, ''),
+        PDC_NAMESPACE,
+      );
+    }
+
   }
 
   const result = await elasticsearch.index('pdc', event, params);
