@@ -3,6 +3,7 @@ const ObjectID = require('mongodb').ObjectID;
 const mongodb = require('../utils/mongodb');
 const event = require('../utils/event');
 const screenshot = require('../utils/screenshot');
+const elasticsearch = require('./elasticsearch');
 
 const collection = 'activities';
 
@@ -33,11 +34,11 @@ const cooperatorListActivities = async(req, res) => {
     res.json(
       activities
         .filter(activity => activity.published)
-        .map(activity => {
-          const newActivity = activity;
-          delete newActivity.cost;
-          delete newActivity.estimated;
-          return newActivity;
+        .map(rActivity => {
+          const activity = rActivity;
+          delete activity.cost;
+          delete activity.estimated;
+          return activity;
         }),
     );
   } catch (err) {
@@ -52,10 +53,10 @@ const piloteListActivities = async (req, res) => {
     res.json(
       activities
         .filter(activity => activity.published)
-        .map(activity => {
-          const newActivity = activity;
-          if (typeof newActivity.participants !== 'undefined') {
-            newActivity.participants = newActivity.participants.map(
+        .map(rActivity => {
+          const activity = rActivity;
+          if (typeof activity.participants !== 'undefined') {
+            activity.participants = activity.participants.map(
               participant => {
                 const newParticipant = participant;
                 delete newParticipant.pedagogy;
@@ -64,9 +65,9 @@ const piloteListActivities = async (req, res) => {
             );
           }
 
-          delete newActivity.cost;
-          delete newActivity.estimated;
-          return newActivity;
+          delete activity.cost;
+          delete activity.estimated;
+          return activity;
         }),
     );
   } catch (err) {
@@ -91,12 +92,12 @@ const publicListActivities = async (req, res) => {
     res.json(
       activities
         .filter(activity => activity.published)
-        .map(activity => {
-          const newActivity = activity;
-          delete newActivity.cost;
-          delete newActivity.estimated;
-          delete newActivity.participants;
-          return newActivity;
+        .map(rActivity => {
+          const activity = rActivity;
+          delete activity.cost;
+          delete activity.estimated;
+          delete activity.participants;
+          return activity;
         }),
     );
   } catch (err) {
@@ -108,6 +109,7 @@ const publicListActivities = async (req, res) => {
 const newActivity = async (req, res) => {
   try {
     const { insertedId } = await mongodb.insertOne(collection, req.body);
+    await elasticsearch.index('mongodb_activities', {...req.body}, {id: insertedId});
     res.json(insertedId);
   } catch (err) {
     console.error(err);
@@ -122,6 +124,7 @@ const editActivity = async (req, res) => {
       { _id: new ObjectID(req.params.id) },
       { $set: req.body },
     );
+    await elasticsearch.index('mongodb_activities', {...req.body}, {id: req.params.id});
     res.json(result);
   } catch (err) {
     console.error(err);
@@ -186,7 +189,7 @@ const evaluateActivity = async(req, res) => {
         '',
         {
           activity,
-          subType: 'done',
+          subType: req.query.special ? 'late' : 'done',
         },
         {date: activity.end, forgeId: `${req.body.pilote._id}_${req.params.id}_${activity.theme}_${activity.title}_${activity.end}`}
       )

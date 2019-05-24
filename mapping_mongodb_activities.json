@@ -1,0 +1,19 @@
+{
+    "mappings": {
+        "dynamic_templates": [
+            {
+                "strings_as_keywords": {
+                    "mapping": {
+                        "type": "keyword"
+                    },
+                    "match_mapping_type": "string"
+                }
+            }
+        ],
+        "properties": {
+            "annotation": {
+                "type": "text"
+            }
+        }
+    }
+}
