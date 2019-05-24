@@ -77,6 +77,17 @@ router.get(
   },
 );
 
+router.get(
+  '/admin/options',
+  passport.authenticate('jwt', { session: false }),
+  roles.isAdmin,
+  (req, res) => {
+    res.json({
+      kibana: process.env.PDC_KIBANA_DASHBOARD_LINK,
+    });
+  },
+);
+
 router.get('/status', (req, res) => {
   res.json({ message: 'API OK' });
 });
