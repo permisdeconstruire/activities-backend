@@ -211,7 +211,7 @@ const registerActivity = async (activityId, pilote, body, who = {_id: 'applicati
     forbidden.push('Individuelle');
   }
   if (
-    ['Fermeture', 'Autonomie', 'Individuelle'].indexOf(activity.status) === -1
+    forbidden.indexOf(activity.status) === -1
   ) {
     const participantIndex = activity.participants.findIndex(
       participant => participant._id === pilote._id,
