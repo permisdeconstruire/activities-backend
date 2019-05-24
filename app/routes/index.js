@@ -56,6 +56,7 @@ router.all(
   passport.authenticate('jwt', { session: false }),
   roles.isPilote,
 );
+
 router.all(
   '/admin/*',
   passport.authenticate('jwt', { session: false }),

@@ -155,7 +155,7 @@ const evaluateActivity = async(req, res) => {
   });
 
   if (
-    ['Fermeture', 'Autonomie', 'Individuelle'].indexOf(activity.status) === -1
+    ['Fermeture', 'Autonomie'].indexOf(activity.status) === -1
   ) {
     if(req.body.missed === true) {
       await event.fire(
@@ -206,6 +206,10 @@ const registerActivity = async (activityId, pilote, body, who = {_id: 'applicati
     activity.participants = [];
   }
 
+  const forbidden = ['Fermeture', 'Autonomie']
+  if(who._id === 'application') {
+    forbidden.push('Individuelle');
+  }
   if (
     ['Fermeture', 'Autonomie', 'Individuelle'].indexOf(activity.status) === -1
   ) {
