@@ -3,7 +3,7 @@ const ObjectID = require('mongodb').ObjectID;
 const mongodb = require('../utils/mongodb');
 const event = require('../utils/event');
 const screenshot = require('../utils/screenshot');
-const elasticsearch = require('./elasticsearch');
+const elasticsearch = require('../utils/elasticsearch');
 
 const collection = 'activities';
 
