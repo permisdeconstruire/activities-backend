@@ -1,11 +1,12 @@
-const _ = require('lodash');
-const ObjectID = require('mongodb').ObjectID;
-const mongodb = require('../utils/mongodb');
+const moment = require('moment');
+const elasticsearch = require('../utils/elasticsearch');
 const event = require('../utils/event');
 
 const listUsers = async (req, res, collection) => {
   try {
-    const users = await mongodb.find(collection);
+    const users = await elasticsearch.search(`mongodb_${collection}`, {
+      query: { match_all: {} },
+    });
     res.json(users);
   } catch (err) {
     console.error(err);
@@ -16,29 +17,42 @@ const listUsers = async (req, res, collection) => {
 const newUser = async (req, res, collection) => {
   try {
     if (collection === 'pilotes') {
-      const pedagogy = await mongodb.find('pedagogy');
-      const categories = _.uniqBy(pedagogy, 'category').map(p => p.category);
-      const levels = {};
-      categories.forEach(category => {
-        levels[category] = 0;
-      });
       const pseudo = `${req.body.prenom} ${req.body.nom}`;
-      const { insertedId } = await mongodb.insertOne(collection, {
-        ...req.body,
-        levels,
+      const fullUser = req.body;
+      Object.keys(fullUser)
+        .forEach(key => {
+          if (key.startsWith('ph_date') || key.startsWith('date')) {
+            if (moment(fullUser[key]).isValid()) {
+              fullUser[key] = moment(fullUser[key]);
+            } else {
+              fullUser[key] = moment('1900-01-01');
+            }
+          } else {
+            fullUser[key] = fullUser[key];
+          }
+        });
+
+      const {
+        body: { _id },
+      } = await elasticsearch.index(`mongodb_${collection}`, {
+        ...fullUser,
         pseudo,
       });
-      res.json(insertedId);
+      res.json(_id);
     } else if (collection === 'cooperators') {
       const titre = `${req.body.prenom} ${req.body.nom}, ${req.body.fonction}`;
-      const { insertedId } = await mongodb.insertOne(collection, {
+      const {
+        body: { _id },
+      } = await elasticsearch.index(`mongodb_${collection}`, {
         ...req.body,
         titre,
       });
-      res.json(insertedId);
+      res.json(_id);
     } else {
-      const { insertedId } = await mongodb.insertOne(collection, req.body);
-      res.json(insertedId);
+      const {
+        body: { _id },
+      } = await elasticsearch.index(`mongodb_${collection}`, req.body);
+      res.json(_id);
     }
   } catch (err) {
     console.error(err);
@@ -48,9 +62,10 @@ const newUser = async (req, res, collection) => {
 
 const editUser = async (req, res, collection) => {
   try {
-    const oldUser = await mongodb.findOne(collection, {
-      _id: new ObjectID(req.params.id),
-    });
+    const oldUser = await elasticsearch.get(
+      `mongodb_${collection}`,
+      req.params.id,
+    );
     const eventPromises = [];
     Object.keys(req.body).forEach(field => {
       if (typeof oldUser[field] === 'undefined') {
@@ -87,27 +102,42 @@ const editUser = async (req, res, collection) => {
       }
     });
     await Promise.all(eventPromises);
+
+    const fullUser = req.body;
+    Object.keys(fullUser)
+      .forEach(key => {
+        if (key.startsWith('ph_date') || key.startsWith('date')) {
+          if (moment(fullUser[key]).isValid()) {
+            fullUser[key] = moment(fullUser[key]);
+          } else {
+            fullUser[key] = moment('1900-01-01');
+          }
+        } else {
+          fullUser[key] = fullUser[key];
+        }
+      });
+
     if (collection === 'cooperators' && req.body.titre === '') {
       const titre = `${req.body.prenom} ${req.body.nom}, ${req.body.fonction}`;
-      const { result } = await mongodb.updateOne(
-        collection,
-        { _id: new ObjectID(req.params.id) },
-        { $set: { ...req.body, titre } },
+      const result = await elasticsearch.update(
+        `mongodb_${collection}`,
+        req.params.id,
+        { ...fullUser, titre },
       );
       res.json(result);
     } else if (collection === 'pilotes' && req.body.pseudo === '') {
       const pseudo = `${req.body.prenom} ${req.body.nom}`;
-      const { result } = await mongodb.updateOne(
-        collection,
-        { _id: new ObjectID(req.params.id) },
-        { $set: { ...req.body, pseudo } },
+      const result = await elasticsearch.update(
+        `mongodb_${collection}`,
+        req.params.id,
+        { ...fullUser, pseudo },
       );
       res.json(result);
     } else {
-      const { result } = await mongodb.updateOne(
-        collection,
-        { _id: new ObjectID(req.params.id) },
-        { $set: req.body },
+      const result = await elasticsearch.update(
+        `mongodb_${collection}`,
+        req.params.id,
+        req.body,
       );
       res.json(result);
     }
@@ -119,9 +149,10 @@ const editUser = async (req, res, collection) => {
 
 const deleteUser = async (req, res, collection) => {
   try {
-    const { result } = await mongodb.deleteOne(collection, {
-      _id: new ObjectID(req.params.id),
-    });
+    const result = await elasticsearch.delete(
+      `mongodb_${collection}`,
+      req.params.id,
+    );
     res.json(result);
   } catch (err) {
     console.error(err);

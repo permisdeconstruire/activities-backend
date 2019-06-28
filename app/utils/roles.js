@@ -1,4 +1,4 @@
-const mongodb = require('./mongodb');
+const elasticsearch = require('./elasticsearch');
 
 const collections = ['pilotes', 'copilotes', 'cooperators'];
 
@@ -6,15 +6,18 @@ const getUserInfo = async email => {
   const userInfo = { roles: {} };
   try {
     const userPromises = collections.map(collection =>
-      mongodb.findOne(collection, { email }),
+      elasticsearch.search(`mongodb_${collection}`, {
+        query: { term: { email } },
+      }),
     );
     const users = await Promise.all(userPromises);
-    users.forEach((user, i) => {
-      if (user !== null) {
+    users.forEach(([user], i) => {
+      if (typeof(user) !== 'undefined') {
         const roleName = collections[i].substring(0, collections[i].length - 1);
-        userInfo.roles[roleName] = user._id.toString();
+        userInfo.roles[roleName] = user._id;
         if (roleName === 'pilote') {
-          userInfo.levels = user.levels;
+          userInfo.pillar = user.pillar;
+          userInfo.level = parseInt(user.level, 10);
           userInfo.pseudo = user.pseudo;
         } else if (roleName === 'cooperator') {
           userInfo.titre = user.titre;
@@ -55,7 +58,9 @@ function isAdmin(req, res, next) {
 
 const listCooperators = async (req, res) => {
   try {
-    const cooperators = await mongodb.find('cooperators');
+    const cooperators = await elasticsearch.search(`mongodb_cooperators`, {
+      query: { match_all: {} },
+    });
     res.json(cooperators);
   } catch (err) {
     console.error(err);

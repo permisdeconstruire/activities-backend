@@ -1,7 +1,5 @@
 const moment = require('moment');
 const uuidv5 = require('uuid/v5');
-const ObjectID = require('mongodb').ObjectID;
-const mongodb = require('../utils/mongodb');
 const elasticsearch = require('./elasticsearch');
 
 const PDC_NAMESPACE = '7065726d-6973-6465-636f-6e7374727569';
@@ -17,9 +15,7 @@ async function fire(
   const params = {};
   const photoPrefix = 'ph_';
 
-  const fullPilote = await mongodb.findOne('pilotes', {
-    _id: new ObjectID(pilote._id),
-  });
+  const fullPilote = await elasticsearch.get('mongodb_pilotes', pilote._id);
 
   const photoPilote = { _id: pilote._id, pseudo: pilote.pseudo };
 
@@ -46,18 +42,14 @@ async function fire(
     data,
   };
   if (forgeId !== false) {
-    if(typeof(forgeId) === 'string') {
-      params.id = uuidv5(
-        forgeId,
-        PDC_NAMESPACE,
-      );
+    if (typeof forgeId === 'string') {
+      params.id = uuidv5(forgeId, PDC_NAMESPACE);
     } else {
       params.id = uuidv5(
         forgeId.reduce((acc, key) => `${acc}_${event[key]}`, ''),
         PDC_NAMESPACE,
       );
     }
-
   }
 
   const result = await elasticsearch.index('pdc', event, params);

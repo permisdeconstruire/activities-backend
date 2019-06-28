@@ -13,6 +13,15 @@
         "properties": {
             "annotation": {
                 "type": "text"
+            },
+            "cooperators": {
+                "type": "nested"
+            },
+            "pedagogy": {
+                "type": "nested"
+            },
+            "participants": {
+                "type": "nested"
             }
         }
     }

@@ -1,11 +1,12 @@
-const ObjectID = require('mongodb').ObjectID;
-const mongodb = require('../utils/mongodb');
+const elasticsearch = require('../utils/elasticsearch');
 
 const collection = 'pedagogy';
 
 const listPedagogy = async (req, res) => {
   try {
-    const pedagogy = await mongodb.find(collection);
+    const pedagogy = await elasticsearch.search(`mongodb_${collection}`, {
+      query: { match_all: {} },
+    });
     res.json(pedagogy);
   } catch (err) {
     console.error(err);
@@ -15,8 +16,10 @@ const listPedagogy = async (req, res) => {
 
 const newPedagogy = async (req, res) => {
   try {
-    const { insertedId } = await mongodb.insertOne(collection, req.body);
-    res.json(insertedId);
+    const {
+      body: { _id },
+    } = await elasticsearch.index(`mongodb_${collection}`, { ...req.body });
+    res.json(_id);
   } catch (err) {
     console.error(err);
     res.json(500, 'Error');
@@ -25,10 +28,10 @@ const newPedagogy = async (req, res) => {
 
 const editPedagogy = async (req, res) => {
   try {
-    const { result } = await mongodb.updateOne(
-      collection,
-      { _id: new ObjectID(req.params.id) },
-      { $set: req.body },
+    const result = await elasticsearch.update(
+      `mongodb_${collection}`,
+      req.params.id,
+      { ...req.body },
     );
     res.json(result);
   } catch (err) {
@@ -39,9 +42,10 @@ const editPedagogy = async (req, res) => {
 
 const deletePedagogy = async (req, res) => {
   try {
-    const { result } = await mongodb.deleteOne(collection, {
-      _id: new ObjectID(req.params.id),
-    });
+    const result = await elasticsearch.delete(
+      `mongodb_${collection}`,
+      req.params.id,
+    );
     res.json(result);
   } catch (err) {
     console.error(err);

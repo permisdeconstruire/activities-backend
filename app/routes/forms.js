@@ -1,11 +1,12 @@
-const ObjectID = require('mongodb').ObjectID;
-const mongodb = require('../utils/mongodb');
+const elasticsearch = require('../utils/elasticsearch');
 
 const collection = 'forms';
 
 const listForms = async (req, res) => {
   try {
-    const forms = await mongodb.find(collection);
+    const forms = await elasticsearch.search(`mongodb_${collection}`, {
+      query: { match_all: {} },
+    });
     res.json(forms);
   } catch (err) {
     console.error(err);
@@ -15,8 +16,10 @@ const listForms = async (req, res) => {
 
 const newForm = async (req, res) => {
   try {
-    const { insertedId } = await mongodb.insertOne(collection, req.body);
-    res.json(insertedId);
+    const {
+      body: { _id },
+    } = await elasticsearch.index(`mongodb_${collection}`, { ...req.body });
+    res.json(_id);
   } catch (err) {
     console.error(err);
     res.json(500, 'Error');
@@ -25,10 +28,10 @@ const newForm = async (req, res) => {
 
 const editForm = async (req, res) => {
   try {
-    const { result } = await mongodb.updateOne(
-      collection,
-      { _id: new ObjectID(req.params.id) },
-      { $set: req.body },
+    const result = await elasticsearch.update(
+      `mongodb_${collection}`,
+      req.params.id,
+      { ...req.body },
     );
     res.json(result);
   } catch (err) {
@@ -39,11 +42,21 @@ const editForm = async (req, res) => {
 
 const getForm = async (req, res) => {
   try {
-    const form = await mongodb.findOne(collection, {
-      type: req.params.type,
-      title: req.params.title,
+    const forms = await elasticsearch.search(`mongodb_${collection}`, {
+      query: {
+        bool: {
+          must: [
+            {
+              term: { type: req.params.type },
+            },
+            {
+              term: { title: req.params.title },
+            },
+          ],
+        },
+      },
     });
-    res.json(form);
+    res.json(forms[0]);
   } catch (err) {
     console.error(err);
     res.json(500, 'Error');
@@ -52,9 +65,10 @@ const getForm = async (req, res) => {
 
 const deleteForm = async (req, res) => {
   try {
-    const { result } = await mongodb.deleteOne(collection, {
-      _id: new ObjectID(req.params.id),
-    });
+    const result = await elasticsearch.delete(
+      `mongodb_${collection}`,
+      req.params.id,
+    );
     res.json(result);
   } catch (err) {
     console.error(err);

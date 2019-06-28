@@ -42,8 +42,8 @@ function saveOrigin(req, res, next) {
 router.all('/undefined', (req, res) => {
   res.type('text/html');
   res.status(200);
-  res.send('<script>window.history.go(-4);</script>')
-})
+  res.send('<script>window.history.go(-4);</script>');
+});
 
 router.get(
   '/login',

@@ -1,6 +1,4 @@
 const moment = require('moment');
-const ObjectID = require('mongodb').ObjectID;
-const mongodb = require('../utils/mongodb');
 const event = require('../utils/event');
 const screenshot = require('../utils/screenshot');
 const elasticsearch = require('../utils/elasticsearch');
@@ -8,7 +6,9 @@ const elasticsearch = require('../utils/elasticsearch');
 const collection = 'activities';
 
 const listActivities = async () => {
-  const activities = await mongodb.find(collection);
+  const activities = await elasticsearch.search(`mongodb_${collection}`, {
+    query: { match_all: {} },
+  });
   activities.sort((a, b) => {
     if (moment(a.start).isBefore(moment(b.start))) {
       return 1;
@@ -28,7 +28,7 @@ const adminListActivities = async (req, res) => {
   }
 };
 
-const cooperatorListActivities = async(req, res) => {
+const cooperatorListActivities = async (req, res) => {
   try {
     const activities = await listActivities();
     res.json(
@@ -45,7 +45,7 @@ const cooperatorListActivities = async(req, res) => {
     console.error(err);
     res.json(500, 'Error');
   }
-}
+};
 
 const piloteListActivities = async (req, res) => {
   try {
@@ -56,13 +56,11 @@ const piloteListActivities = async (req, res) => {
         .map(rActivity => {
           const activity = rActivity;
           if (typeof activity.participants !== 'undefined') {
-            activity.participants = activity.participants.map(
-              participant => {
-                const newParticipant = participant;
-                delete newParticipant.pedagogy;
-                return newParticipant;
-              },
-            );
+            activity.participants = activity.participants.map(participant => {
+              const newParticipant = participant;
+              delete newParticipant.pedagogy;
+              return newParticipant;
+            });
           }
 
           delete activity.cost;
@@ -108,9 +106,10 @@ const publicListActivities = async (req, res) => {
 
 const newActivity = async (req, res) => {
   try {
-    const { insertedId } = await mongodb.insertOne(collection, req.body);
-    await elasticsearch.index('mongodb_activities', {...req.body}, {id: insertedId});
-    res.json(insertedId);
+    const {
+      body: { _id },
+    } = await elasticsearch.index(`mongodb_${collection}`, { ...req.body });
+    res.json(_id);
   } catch (err) {
     console.error(err);
     res.json(500, 'Error');
@@ -119,103 +118,34 @@ const newActivity = async (req, res) => {
 
 const editActivity = async (req, res) => {
   try {
-    const { result } = await mongodb.updateOne(
-      collection,
-      { _id: new ObjectID(req.params.id) },
-      { $set: req.body },
+    const result = await elasticsearch.update(
+      `mongodb_${collection}`,
+      req.params.id,
+      { ...req.body },
     );
-    await elasticsearch.index('mongodb_activities', {...req.body}, {id: req.params.id});
     res.json(result);
   } catch (err) {
-    console.error(err);
+    console.error(JSON.stringify(err, '', 2));
     res.json(500, 'Error');
   }
 };
 
-const adminRegisterActivity = async(req, res) => {
-  try{
-    const result = await registerActivity(req.params.id, req.body.pilote, {action: req.body.action, justification: '', pedagogy: []}, { _id: req.user.roles.copilote, email: req.user.email });
-    res.json(result)
-  } catch(err) {
-    console.error(err);
-    res.json(500, 'Error');
-  }
-}
-
-const piloteRegisterActivity = async(req, res) => {
-  try{
-    const result = await registerActivity(req.params.id, {_id: req.user.roles.pilote, pseudo: req.user.pseudo}, req.body);
-    res.json(result)
-  } catch(err) {
-    console.error(err);
-    res.json(500, 'Error');
-  }
-}
-
-const evaluateActivity = async(req, res) => {
-  const activity = await mongodb.findOne(collection, {
-    _id: new ObjectID(req.params.id),
-  });
-
-  if (
-    ['Fermeture', 'Autonomie'].indexOf(activity.status) === -1
-  ) {
-    if(req.body.missed === true) {
-      await event.fire(
-        {_id: req.body.pilote._id, pseudo: req.body.pilote.pseudo},
-        { _id: req.user.roles.cooperator, titre: req.user.titre },
-        'activity',
-        '',
-        {
-          activity,
-          subType: 'missed',
-        },
-        {date: activity.end, forgeId: `${req.body.pilote._id}_${req.params.id}_${activity.theme}_${activity.title}_${activity.end}`}
-      )
-    } else {
-      await event.fire(
-        {_id: req.body.pilote._id, pseudo: req.body.pilote.pseudo},
-        { _id: req.user.roles.cooperator, titre: req.user.titre },
-        'evaluation',
-        req.body.comment,
-        {...req.body.data, activity},
-        {date: activity.end, forgeId: `${req.body.pilote._id}_${req.params.id}_${req.body.data.objective}_${activity.theme}_${activity.title}_${activity.end}`}
-      )
-
-      await event.fire(
-        {_id: req.body.pilote._id, pseudo: req.body.pilote.pseudo},
-        { _id: req.user.roles.cooperator, titre: req.user.titre },
-        'activity',
-        '',
-        {
-          activity,
-          subType: req.query.special ? 'late' : 'done',
-        },
-        {date: activity.end, forgeId: `${req.body.pilote._id}_${req.params.id}_${activity.theme}_${activity.title}_${activity.end}`}
-      )
-    }
-    res.json('Ok');
-  } else {
-    res.json(403, 'Impossible');
-  }
-  res.json({})
-}
-
-const registerActivity = async (activityId, pilote, body, who = {_id: 'application'}) => {
-  const activity = await mongodb.findOne(collection, {
-    _id: new ObjectID(activityId),
-  });
+const registerActivity = async (
+  activityId,
+  pilote,
+  body,
+  who = { _id: 'application' },
+) => {
+  const activity = await elasticsearch.get(`mongodb_${collection}`, activityId);
   if (typeof activity.participants === 'undefined') {
     activity.participants = [];
   }
 
-  const forbidden = ['Fermeture', 'Autonomie']
-  if(who._id === 'application') {
+  const forbidden = ['Fermeture', 'Autonomie'];
+  if (who._id === 'application') {
     forbidden.push('Individuelle');
   }
-  if (
-    forbidden.indexOf(activity.status) === -1
-  ) {
+  if (forbidden.indexOf(activity.status) === -1) {
     const participantIndex = activity.participants.findIndex(
       participant => participant._id === pilote._id,
     );
@@ -249,22 +179,96 @@ const registerActivity = async (activityId, pilote, body, who = {_id: 'applicati
         { activity, subType: 'unregister' },
       );
     }
-    const { result } = await mongodb.updateOne(
-      collection,
-      { _id: new ObjectID(activityId) },
-      { $set: activity },
+    const result = await elasticsearch.update(
+      `mongodb_${collection}`,
+      activityId,
+      activity,
     );
     return result;
-  } else {
-    throw new Error("Impossible");
   }
+  throw new Error('Impossible');
+};
+
+const adminRegisterActivity = async (req, res) => {
+  try {
+    const result = await registerActivity(
+      req.params.id,
+      req.body.pilote,
+      { action: req.body.action, justification: '', pedagogy: [] },
+      { _id: req.user.roles.copilote, email: req.user.email },
+    );
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
+};
+
+const piloteRegisterActivity = async (req, res) => {
+  try {
+    const result = await registerActivity(
+      req.params.id,
+      { _id: req.user.roles.pilote, pseudo: req.user.pseudo },
+      req.body,
+    );
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
+};
+
+const evaluateActivity = async (req, res) => {
+  const activity = await elasticsearch.get(
+    `mongodb_${collection}`,
+    req.params.id,
+  );
+  if (['Fermeture', 'Autonomie'].indexOf(activity.status) === -1) {
+    if (typeof(req.body.activityAction) !== 'undefined') {
+      await event.fire(
+        { _id: req.body.pilote._id, pseudo: req.body.pilote.pseudo },
+        { _id: req.user.roles.cooperator, titre: req.user.titre },
+        'activity',
+        '',
+        {
+          activity,
+          subType: req.body.activityAction,
+        },
+        {
+          date: activity.end,
+          forgeId: `${req.body.pilote._id}_${req.params.id}_${activity.theme}_${
+            activity.title
+          }_${activity.end}`,
+        },
+      );
+    } else {
+      await event.fire(
+        { _id: req.body.pilote._id, pseudo: req.body.pilote.pseudo },
+        { _id: req.user.roles.cooperator, titre: req.user.titre },
+        'evaluation',
+        req.body.comment,
+        { ...req.body.data, activity },
+        {
+          date: activity.end,
+          forgeId: `${req.body.pilote._id}_${req.params.id}_${
+            req.body.data.objective
+          }_${activity.theme}_${activity.title}_${activity.end}`,
+        },
+      );
+    }
+    res.json('Ok');
+  } else {
+    res.json(403, 'Impossible');
+  }
+  res.json({});
 };
 
 const deleteActivity = async (req, res) => {
   try {
-    const { result } = await mongodb.deleteOne(collection, {
-      _id: new ObjectID(req.params.id),
-    });
+    const result = await elasticsearch.delete(
+      `mongodb_${collection}`,
+      req.params.id,
+    );
     res.json(result);
   } catch (err) {
     console.error(err);

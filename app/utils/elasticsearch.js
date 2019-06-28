@@ -6,11 +6,50 @@ const connectElasticsearch = () =>
   });
 
 const elastic = {
+  get: async (index, id) => {
+    const {
+      body: { _source: res },
+    } = await elastic.client.get({
+      index,
+      id,
+    });
+    return { ...res, _id: id };
+  },
+  delete: async (index, id) => {
+    await elastic.client.delete({
+      index,
+      id,
+      refresh: 'true',
+    })
+    return 'deleted';
+  },
   search: async (index, body, params = {}) => {
+    let res;
     if (typeof body === 'string') {
-      return elastic.client.search({ ...params, index, q: body });
+      const {
+        body: { hits },
+      } = await elastic.client.search({ ...params, size: 10000, index, q: body});
+      res = hits.hits;
+    } else {
+      const {
+        body: { hits },
+      } = await elastic.client.search({ ...params, size: 10000, index, body });
+      res = hits.hits;
     }
-    return elastic.client.search({ ...params, index, body });
+    return res.map(r => ({ ...r._source, _id: r._id }));
+  },
+  update: async (index, id, body) => {
+    const cleanBody = body;
+    if (typeof cleanBody._id !== 'undefined') {
+      delete cleanBody._id;
+    }
+    await elastic.client.update({
+      index,
+      id,
+      refresh: 'true',
+      body: {doc: cleanBody},
+    });
+    return 'updated';
   },
   index: async (index, body, params = {}) => {
     if (Array.isArray(body)) {
@@ -23,17 +62,22 @@ const elastic = {
       });
       return elastic.client.bulk({
         ...params,
-        type: '_doc',
+        refresh: 'true',
         index,
         body: arrayBody,
       });
     }
 
+    const cleanBody = body;
+    if (typeof cleanBody._id !== 'undefined') {
+      delete cleanBody._id;
+    }
+
     return elastic.client.index({
       ...params,
+      refresh: 'true',
       index,
-      type: '_doc',
-      body,
+      body: cleanBody,
     });
   },
 };

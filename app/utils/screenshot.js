@@ -17,8 +17,8 @@ const screenshot = async () => {
       elements[i].style['padding-top'] = '0px';
       elements[i].style['padding-bottom'] = '0px';
       elements[i].style['margin-bottom'] = '-35px';
-      elements[i].removeChild(elements[i].lastChild)
-      elements[i].firstChild.style['height'] = '50px';
+      elements[i].removeChild(elements[i].lastChild);
+      elements[i].firstChild.style.height = '50px';
     }
   }, '.jumbotron');
 
