@@ -52,9 +52,9 @@ const newUser = async (req, res, collection) => {
         .forEach(key => {
           if (key.startsWith('ph_date') || key.startsWith('date')) {
             if (moment(fullUser[key]).isValid()) {
-              fullUser[key] = moment(fullUser[key]);
+              fullUser[key] = moment(fullUser[key]).format("YYYY-MM-DD");
             } else {
-              fullUser[key] = moment('1900-01-01');
+              fullUser[key] = moment('1900-01-01').format("YYYY-MM-DD");
             }
           } else {
             fullUser[key] = fullUser[key];
@@ -137,9 +137,9 @@ const editUser = async (req, res, collection) => {
       .forEach(key => {
         if (key.startsWith('ph_date') || key.startsWith('date')) {
           if (moment(fullUser[key]).isValid()) {
-            fullUser[key] = moment(fullUser[key]);
+            fullUser[key] = moment(fullUser[key]).format("YYYY-MM-DD");
           } else {
-            fullUser[key] = moment('1900-01-01');
+            fullUser[key] = moment('1900-01-01').format("YYYY-MM-DD");
           }
         } else {
           fullUser[key] = fullUser[key];
