@@ -7,7 +7,7 @@ const screenshot = async () => {
   const pages = [];
   await page.setViewport({ width: 1920, height: 1080 });
   await page.goto('https://agenda.pdc.bug.builders/', {
-    waitUntil: 'networkidle0',
+    waitUntil: 'networkidle2',
   });
 
   await page.evaluate(sel => {
@@ -34,19 +34,18 @@ const screenshot = async () => {
     // eslint-disable-next-line
     const elements = document.querySelectorAll(sel);
     for (let i = 0; i < elements.length; i += 1) {
-      elements[i].style['z-index'] = '-100';
-    }
-  }, '.rbc-btn-group');
-
-  await page.evaluate(sel => {
-    // eslint-disable-next-line
-    const elements = document.querySelectorAll(sel);
-    for (let i = 0; i < elements.length; i += 1) {
       elements[i].style['background-color'] = 'inherit';
     }
   }, '.rbc-today');
 
   for (let i = 0; i < 6; i += 1) {
+    await page.evaluate(sel => {
+      // eslint-disable-next-line
+      const elements = document.querySelectorAll(sel);
+      for (let i = 0; i < elements.length; i += 1) {
+        elements[i].style['z-index'] = '-100';
+      }
+    }, '.rbc-btn-group');
     const screenshotPdf = `/tmp/page_${i}.pdf`;
     await page.emulateMedia('screen');
     await page.pdf({
@@ -56,8 +55,16 @@ const screenshot = async () => {
       printBackground: true,
       landscape: true,
     });
+    await page.evaluate(sel => {
+      // eslint-disable-next-line
+      const elements = document.querySelectorAll(sel);
+      for (let i = 0; i < elements.length; i += 1) {
+        elements[i].style['z-index'] = '100';
+      }
+    }, '.rbc-btn-group');
     await page.click('.rbc-btn-group>button:nth-child(3)');
     pages.push(screenshotPdf);
+
   }
 
   await browser.close();
@@ -67,9 +74,5 @@ const screenshot = async () => {
 
   return output;
 };
-
-(async () => {
-  await screenshot();
-})();
 
 module.exports = screenshot;

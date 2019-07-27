@@ -4,12 +4,17 @@ const event = require('../utils/event');
 
 const listUsers = async (req, res, collection) => {
   try {
-    const users = await elasticsearch.search(`mongodb_${collection}`, {
-      query: { match_all: {} },
-    });
-    res.json(users);
+    if(typeof(req.query.filter) === 'undefined'){
+      const users = await elasticsearch.search(`mongodb_${collection}`, {
+        query: { match_all: {} },
+      });
+      res.json(users);
+    } else {
+      const users = await elasticsearch.search(`mongodb_${collection}`, req.query.filter);
+      res.json(users);
+    }
   } catch (err) {
-    console.error(err);
+    console.error(JSON.stringify(err, '', 2));
     res.json(500, 'Error');
   }
 };
