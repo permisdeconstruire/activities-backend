@@ -1,4 +1,5 @@
 const event = require('../utils/event');
+const elasticsearch = require('../utils/elasticsearch');
 
 const newEvent = async (req, res) => {
   try {
@@ -10,6 +11,14 @@ const newEvent = async (req, res) => {
       req.body.data,
       { date: req.body.date },
     );
+
+    if(req.body.type === 'parcours') {
+      const result = await elasticsearch.update(
+        `mongodb_pilotes`,
+        req.body.pilote._id,
+        { pillar: req.body.data.name, level: req.body.data.level },
+      );
+    }
     res.json('OK');
   } catch (err) {
     console.log(err);

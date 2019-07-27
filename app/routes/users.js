@@ -19,6 +19,30 @@ const listUsers = async (req, res, collection) => {
   }
 };
 
+const cooperatorListPilotes = async (req, res) => {
+  try {
+    let pilotes
+    if(typeof(req.query.filter) === 'undefined'){
+      pilotes = await elasticsearch.search(`mongodb_pilotes`, {
+        query: { match_all: {} },
+      });
+    } else {
+      pilotes = await elasticsearch.search(`mongodb_pilotes`, req.query.filter);
+
+    }
+    res.json(
+      pilotes
+        .map(rPilote => {
+          const pilote = {level: rPilote.level, pillar: rPilote.pillar, pseudo: rPilote.pseudo, _id: rPilote._id};
+          return pilote;
+        })
+    )
+  } catch (err) {
+    console.error(JSON.stringify(err, '', 2));
+    res.json(500, 'Error');
+  }
+};
+
 const newUser = async (req, res, collection) => {
   try {
     if (collection === 'pilotes') {
@@ -200,6 +224,7 @@ const deleteCooperator = async (req, res) => {
 module.exports = {
   create: router => {
     router.get('/admin/pilotes', listPilotes);
+    router.get('/cooperator/pilotes', cooperatorListPilotes);
     router.post('/admin/pilotes', newPilote);
     router.put('/admin/pilotes/id/:id', editPilote);
     router.delete('/admin/pilotes/id/:id', deletePilote);
