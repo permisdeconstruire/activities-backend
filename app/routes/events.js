@@ -13,11 +13,19 @@ const newEvent = async (req, res) => {
     );
 
     if(req.body.type === 'parcours') {
-      const result = await elasticsearch.update(
-        `mongodb_pilotes`,
-        req.body.pilote._id,
-        { pillar: req.body.data.name, level: req.body.data.level },
-      );
+      if(['terminate', 'stop'].indexOf(req.body.data.what) !== -1) {
+        const result = await elasticsearch.update(
+          `mongodb_pilotes`,
+          req.body.pilote._id,
+          { pillar: 'Aucun', level: 0 },
+        );
+      } else {
+        const result = await elasticsearch.update(
+          `mongodb_pilotes`,
+          req.body.pilote._id,
+          { pillar: req.body.data.name, level: req.body.data.level },
+        );
+      }
     }
     res.json('OK');
   } catch (err) {
