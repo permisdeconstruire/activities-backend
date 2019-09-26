@@ -17,7 +17,7 @@ const newEvent = async (req, res) => {
         const result = await elasticsearch.update(
           `mongodb_pilotes`,
           req.body.pilote._id,
-          { pillar: 'Aucun', level: 0 },
+          { pillar: '', level: 0 },
         );
       } else {
         const result = await elasticsearch.update(
