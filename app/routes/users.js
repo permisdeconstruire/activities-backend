@@ -2,15 +2,42 @@ const moment = require('moment');
 const elasticsearch = require('../utils/elasticsearch');
 const event = require('../utils/event');
 
+const alreadyExistQuery = ({prenom, nom, ph_datenaissance}) => ({
+  query: {
+    bool: {
+      must: [
+        {
+          term: {
+            prenom,
+          },
+        },
+        {
+          term: {
+            nom,
+          }
+        },
+        {
+          term: {
+            ph_datenaissance,
+          }
+        }
+      ]
+    }
+  }
+});
+
 const listUsers = async (req, res, collection) => {
   try {
-    if(typeof(req.query.filter) === 'undefined'){
+    if (typeof req.query.filter === 'undefined') {
       const users = await elasticsearch.search(`mongodb_${collection}`, {
         query: { match_all: {} },
       });
       res.json(users);
     } else {
-      const users = await elasticsearch.search(`mongodb_${collection}`, req.query.filter);
+      const users = await elasticsearch.search(
+        `mongodb_${collection}`,
+        req.query.filter,
+      );
       res.json(users);
     }
   } catch (err) {
@@ -21,22 +48,23 @@ const listUsers = async (req, res, collection) => {
 
 const cooperatorListPilotes = async (req, res) => {
   try {
-    let pilotes
-    if(typeof(req.query.filter) === 'undefined'){
+    let pilotes;
+    if (typeof req.query.filter === 'undefined') {
       pilotes = await elasticsearch.search(`mongodb_pilotes`, {
         query: { match_all: {} },
       });
     } else {
       pilotes = await elasticsearch.search(`mongodb_pilotes`, req.query.filter);
-
     }
     res.json(
-      pilotes
-        .map(rPilote => {
-          const pilote = {level: rPilote.level, pillar: rPilote.pillar, pseudo: rPilote.pseudo, _id: rPilote._id};
-          return pilote;
-        })
-    )
+      pilotes.map(rPilote => {
+        const pilote = {
+          pseudo: rPilote.pseudo,
+          _id: rPilote._id,
+        };
+        return pilote;
+      }),
+    );
   } catch (err) {
     console.error(JSON.stringify(err, '', 2));
     res.json(500, 'Error');
@@ -46,30 +74,39 @@ const cooperatorListPilotes = async (req, res) => {
 const newUser = async (req, res, collection) => {
   try {
     if (collection === 'pilotes') {
-      const pseudo = `${req.body.prenom} ${req.body.nom}`;
+      let pseudo = `${req.body.prenom} ${req.body.nom}`;
+      if(req.body.pseudo !== '') {
+        pseudo = req.body.pseudo;
+      }
       const fullUser = req.body;
-      Object.keys(fullUser)
-        .forEach(key => {
-          if (key.startsWith('ph_date') || key.startsWith('date')) {
-            if (moment(fullUser[key]).isValid()) {
-              fullUser[key] = moment(fullUser[key]).format("YYYY-MM-DD");
-            } else {
-              fullUser[key] = moment('1900-01-01').format("YYYY-MM-DD");
-            }
+      Object.keys(fullUser).forEach(key => {
+        if (key.startsWith('ph_date') || key.startsWith('date')) {
+          if (moment(fullUser[key]).isValid()) {
+            fullUser[key] = moment(fullUser[key]).format('YYYY-MM-DD');
           } else {
-            fullUser[key] = fullUser[key];
+            fullUser[key] = moment('1900-01-01').format('YYYY-MM-DD');
           }
-        });
-
-      const {
-        body: { _id },
-      } = await elasticsearch.index(`mongodb_${collection}`, {
-        ...fullUser,
-        pseudo,
+        } else {
+          fullUser[key] = fullUser[key];
+        }
       });
-      res.json(_id);
+      const alreadyExist = await elasticsearch.search(`mongodb_${collection}`, alreadyExistQuery(fullUser));
+      if(alreadyExist.length === 0) {
+        const {
+          body: { _id },
+        } = await elasticsearch.index(`mongodb_${collection}`, {
+          ...fullUser,
+          pseudo,
+        });
+        res.json(_id);
+      } else {
+        throw new Error('PiloteAlreadyExists');
+      }
     } else if (collection === 'cooperators') {
-      const titre = `${req.body.prenom} ${req.body.nom}, ${req.body.fonction}`;
+      let titre = `${req.body.prenom} ${req.body.nom}, ${req.body.fonction}`;
+      if(req.body.titre !== '') {
+        titre = req.body.titre;
+      }
       const {
         body: { _id },
       } = await elasticsearch.index(`mongodb_${collection}`, {
@@ -84,8 +121,12 @@ const newUser = async (req, res, collection) => {
       res.json(_id);
     }
   } catch (err) {
-    console.error(err);
-    res.json(500, 'Error');
+    if(err.message === 'PiloteAlreadyExists') {
+      res.json(500, 'PiloteAlreadyExists');
+    } else {
+      console.error(err);
+      res.json(500, 'Error');
+    }
   }
 };
 
@@ -95,84 +136,80 @@ const editUser = async (req, res, collection) => {
       `mongodb_${collection}`,
       req.params.id,
     );
-    const eventPromises = [];
-    Object.keys(req.body).forEach(field => {
-      if (typeof oldUser[field] === 'undefined') {
-        if (collection === 'pilotes') {
-          eventPromises.push(
-            event.fire(
-              { _id: req.params.id, pseudo: req.body.pseudo },
-              { _id: req.user.roles.copilote, email: req.user.email },
-              'profileUpdate',
-              '',
-              {
-                field,
-                newValue: req.body[field],
-              },
-            ),
-          );
-        }
-      } else if (oldUser[field].toString() !== req.body[field].toString()) {
-        if (collection === 'pilotes') {
-          eventPromises.push(
-            event.fire(
-              { _id: req.params.id, pseudo: req.body.pseudo },
-              { _id: req.user.roles.copilote, email: req.user.email },
-              'profileUpdate',
-              '',
-              {
-                field,
-                oldValue: oldUser[field].toString(),
-                newValue: req.body[field].toString(),
-              },
-            ),
-          );
-        }
-      }
-    });
-    await Promise.all(eventPromises);
 
     const fullUser = req.body;
-    Object.keys(fullUser)
-      .forEach(key => {
-        if (key.startsWith('ph_date') || key.startsWith('date')) {
-          if (moment(fullUser[key]).isValid()) {
-            fullUser[key] = moment(fullUser[key]).format("YYYY-MM-DD");
-          } else {
-            fullUser[key] = moment('1900-01-01').format("YYYY-MM-DD");
-          }
+    Object.keys(fullUser).forEach(key => {
+      if (key.startsWith('ph_date') || key.startsWith('date')) {
+        if (moment(fullUser[key]).isValid()) {
+          fullUser[key] = moment(fullUser[key]).format('YYYY-MM-DD');
         } else {
-          fullUser[key] = fullUser[key];
+          fullUser[key] = moment('1900-01-01').format('YYYY-MM-DD');
         }
-      });
+      } else {
+        fullUser[key] = fullUser[key];
+      }
+    });
 
-    if (collection === 'cooperators' && req.body.titre === '') {
-      const titre = `${req.body.prenom} ${req.body.nom}, ${req.body.fonction}`;
-      const result = await elasticsearch.update(
-        `mongodb_${collection}`,
-        req.params.id,
-        { ...fullUser, titre },
-      );
-      res.json(result);
-    } else if (collection === 'pilotes' && req.body.pseudo === '') {
-      const pseudo = `${req.body.prenom} ${req.body.nom}`;
-      const result = await elasticsearch.update(
-        `mongodb_${collection}`,
-        req.params.id,
-        { ...fullUser, pseudo },
-      );
-      res.json(result);
-    } else {
-      const result = await elasticsearch.update(
-        `mongodb_${collection}`,
-        req.params.id,
-        req.body,
-      );
-      res.json(result);
+    if (collection === 'cooperators') {
+      if(req.body.titre === '') {
+        fullUser.titre = `${req.body.prenom} ${req.body.nom}, ${req.body.fonction}`;
+      }
+    } else if (collection === 'pilotes') {
+      const alreadyExist = await elasticsearch.search(`mongodb_${collection}`, alreadyExistQuery(fullUser));
+      if(alreadyExist.length === 0 || (alreadyExist.length === 1 && alreadyExist[0]._id === req.params.id)) {
+        const eventPromises = [];
+        Object.keys(fullUser).forEach(field => {
+          if (typeof oldUser[field] === 'undefined') {
+            eventPromises.push(
+              event.fire(
+                { _id: req.params.id },
+                { _id: req.user.roles.copilote, email: req.user.email },
+                'profileUpdate',
+                '',
+                {
+                  field,
+                  newValue: fullUser[field],
+                },
+              ),
+            );
+          } else if (oldUser[field].toString() !== fullUser[field].toString()) {
+            eventPromises.push(
+              event.fire(
+                { _id: req.params.id },
+                { _id: req.user.roles.copilote, email: req.user.email },
+                'profileUpdate',
+                '',
+                {
+                  field,
+                  oldValue: oldUser[field].toString(),
+                  newValue: fullUser[field].toString(),
+                },
+              ),
+            );
+          }
+        });
+        await Promise.all(eventPromises);
+        if(req.body.pseudo === '') {
+          fullUser.pseudo = `${req.body.prenom} ${req.body.nom}`;
+        }
+      } else {
+        throw new Error('PiloteAlreadyExists');
+      }
     }
+
+    const result = await elasticsearch.update(
+      `mongodb_${collection}`,
+      req.params.id,
+      fullUser,
+    );
+    res.json(result);
   } catch (err) {
-    console.error(err);
-    res.json(500, 'Error');
+    if(err.message === 'PiloteAlreadyExists') {
+      res.json(500, 'PiloteAlreadyExists');
+    } else {
+      console.error(err);
+      res.json(500, 'Error');
+    }
   }
 };
 
@@ -188,6 +225,63 @@ const deleteUser = async (req, res, collection) => {
     res.json(500, 'Error');
   }
 };
+
+const getPilote = async (req, res) => {
+  try {
+    const {pillar, level} = await elasticsearch.get(`mongodb_pilotes`, req.params.id);
+    const objectives = await elasticsearch.search('mongodb_pedagogy', {
+      query: {
+        bool: {
+          must: [
+            {
+              term: {
+                pillar,
+              },
+            },
+            {
+              term: {
+                level,
+              }
+            }
+          ]
+        }
+      }
+    });
+
+    const evaluated = await elasticsearch.search('pdc', {
+      query: {
+        bool: {
+          must: [
+            {
+              term: {
+                type: 'evaluation',
+              },
+            },
+            {
+              term: {
+                'data.activity.status': pillar,
+              }
+            },
+            {
+              term: {
+                'data.activity.level': level,
+              }
+            },
+            {
+              term: {
+                'pilote._id': req.params.id,
+              }
+            }
+          ]
+        }
+      }
+    })
+    res.json({evaluated: evaluated.map(e => ({objective: e.data.objective, evaluation: e.data.evaluation})), objectives});
+  } catch(err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
+}
 
 const listPilotes = async (req, res) => {
   listUsers(req, res, 'pilotes');
@@ -226,6 +320,7 @@ module.exports = {
     router.get('/admin/pilotes', listPilotes);
     router.get('/cooperator/pilotes', cooperatorListPilotes);
     router.post('/admin/pilotes', newPilote);
+    router.get('/admin/pilotes/id/:id', getPilote);
     router.put('/admin/pilotes/id/:id', editPilote);
     router.delete('/admin/pilotes/id/:id', deletePilote);
 

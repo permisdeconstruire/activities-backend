@@ -12,19 +12,17 @@ const newEvent = async (req, res) => {
       { date: req.body.date },
     );
 
-    if(req.body.type === 'parcours') {
-      if(['terminate', 'stop'].indexOf(req.body.data.what) !== -1) {
-        const result = await elasticsearch.update(
-          `mongodb_pilotes`,
-          req.body.pilote._id,
-          { pillar: '', level: 0 },
-        );
+    if (req.body.type === 'parcours') {
+      if (['terminate', 'stop'].indexOf(req.body.data.what) !== -1) {
+        await elasticsearch.update(`mongodb_pilotes`, req.body.pilote._id, {
+          pillar: '',
+          level: 0,
+        });
       } else {
-        const result = await elasticsearch.update(
-          `mongodb_pilotes`,
-          req.body.pilote._id,
-          { pillar: req.body.data.name, level: req.body.data.level },
-        );
+        await elasticsearch.update(`mongodb_pilotes`, req.body.pilote._id, {
+          pillar: req.body.data.name,
+          level: req.body.data.level,
+        });
       }
     }
     res.json('OK');

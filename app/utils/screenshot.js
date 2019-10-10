@@ -39,11 +39,12 @@ const screenshot = async () => {
   }, '.rbc-today');
 
   for (let i = 0; i < 6; i += 1) {
+    // eslint-disable-next-line
     await page.evaluate(sel => {
       // eslint-disable-next-line
       const elements = document.querySelectorAll(sel);
-      for (let i = 0; i < elements.length; i += 1) {
-        elements[i].style['z-index'] = '-100';
+      for (let j = 0; j < elements.length; j += 1) {
+        elements[j].style['z-index'] = '-100';
       }
     }, '.rbc-btn-group');
     const screenshotPdf = `/tmp/page_${i}.pdf`;
@@ -55,16 +56,16 @@ const screenshot = async () => {
       printBackground: true,
       landscape: true,
     });
+    // eslint-disable-next-line
     await page.evaluate(sel => {
       // eslint-disable-next-line
       const elements = document.querySelectorAll(sel);
-      for (let i = 0; i < elements.length; i += 1) {
-        elements[i].style['z-index'] = '100';
+      for (let j = 0; j < elements.length; i += 1) {
+        elements[j].style['z-index'] = '100';
       }
     }, '.rbc-btn-group');
     await page.click('.rbc-btn-group>button:nth-child(3)');
     pages.push(screenshotPdf);
-
   }
 
   await browser.close();

@@ -224,7 +224,7 @@ const evaluateActivity = async (req, res) => {
     req.params.id,
   );
   if (['Fermeture', 'Autonomie'].indexOf(activity.status) === -1) {
-    if (typeof(req.body.activityAction) !== 'undefined') {
+    if (typeof req.body.activityAction !== 'undefined') {
       await event.fire(
         { _id: req.body.pilote._id, pseudo: req.body.pilote.pseudo },
         { _id: req.user.roles.cooperator, titre: req.user.titre },
@@ -260,7 +260,6 @@ const evaluateActivity = async (req, res) => {
   } else {
     res.json(403, 'Impossible');
   }
-  res.json({});
 };
 
 const deleteActivity = async (req, res) => {

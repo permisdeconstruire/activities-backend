@@ -12,12 +12,10 @@ const getUserInfo = async email => {
     );
     const users = await Promise.all(userPromises);
     users.forEach(([user], i) => {
-      if (typeof(user) !== 'undefined') {
+      if (typeof user !== 'undefined') {
         const roleName = collections[i].substring(0, collections[i].length - 1);
         userInfo.roles[roleName] = user._id;
         if (roleName === 'pilote') {
-          userInfo.pillar = user.pillar;
-          userInfo.level = parseInt(user.level, 10);
           userInfo.pseudo = user.pseudo;
         } else if (roleName === 'cooperator') {
           userInfo.titre = user.titre;

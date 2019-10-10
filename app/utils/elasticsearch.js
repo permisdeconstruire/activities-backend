@@ -20,7 +20,7 @@ const elastic = {
       index,
       id,
       refresh: 'true',
-    })
+    });
     return 'deleted';
   },
   search: async (index, body, params = {}) => {
@@ -28,7 +28,12 @@ const elastic = {
     if (typeof body === 'string') {
       const {
         body: { hits },
-      } = await elastic.client.search({ ...params, size: 10000, index, q: body});
+      } = await elastic.client.search({
+        ...params,
+        size: 10000,
+        index,
+        q: body,
+      });
       res = hits.hits;
     } else {
       const {
@@ -47,7 +52,7 @@ const elastic = {
       index,
       id,
       refresh: 'true',
-      body: {doc: cleanBody},
+      body: { doc: cleanBody },
     });
     return 'updated';
   },
