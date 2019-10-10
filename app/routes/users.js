@@ -90,7 +90,11 @@ const newUser = async (req, res, collection) => {
           fullUser[key] = fullUser[key];
         }
       });
-      const alreadyExist = await elasticsearch.search(`mongodb_${collection}`, alreadyExistQuery(fullUser));
+      let alreadyExist = [];
+      try {
+        alreadyExist = await elasticsearch.search(`mongodb_${collection}`, alreadyExistQuery(fullUser));
+      } catch(e) {
+      }
       if(alreadyExist.length === 0) {
         const {
           body: { _id },
@@ -155,7 +159,11 @@ const editUser = async (req, res, collection) => {
         fullUser.titre = `${req.body.prenom} ${req.body.nom}, ${req.body.fonction}`;
       }
     } else if (collection === 'pilotes') {
-      const alreadyExist = await elasticsearch.search(`mongodb_${collection}`, alreadyExistQuery(fullUser));
+      let alreadyExist = [];
+      try {
+        alreadyExist = await elasticsearch.search(`mongodb_${collection}`, alreadyExistQuery(fullUser));
+      } catch(e) {
+      }
       if(alreadyExist.length === 0 || (alreadyExist.length === 1 && alreadyExist[0]._id === req.params.id)) {
         const eventPromises = [];
         Object.keys(fullUser).forEach(field => {
@@ -208,6 +216,9 @@ const editUser = async (req, res, collection) => {
       res.json(500, 'PiloteAlreadyExists');
     } else {
       console.error(err);
+      if(typeof(err.meta) !== 'undefined') {
+        console.log(err.meta.body.error);
+      }
       res.json(500, 'Error');
     }
   }
