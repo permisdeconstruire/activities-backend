@@ -290,7 +290,7 @@ const getPilote = async (req, res) => {
     res.json({evaluated: evaluated.map(e => ({objective: e.data.objective, evaluation: e.data.evaluation})), objectives});
   } catch(err) {
     console.error(err);
-    res.json(500, 'Error');
+    res.json({evaluated: [], objectives: []});
   }
 }
 
