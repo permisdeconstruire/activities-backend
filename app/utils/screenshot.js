@@ -1,12 +1,12 @@
 const puppeteer = require('puppeteer');
 const cp = require('child_process');
 
-const screenshot = async () => {
+const screenshot = async (url = 'https://agenda.pdc.bug.builders/') => {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   const pages = [];
   await page.setViewport({ width: 1920, height: 1080 });
-  await page.goto('https://agenda.pdc.bug.builders/', {
+  await page.goto(url, {
     waitUntil: 'networkidle2',
   });
 
@@ -38,6 +38,14 @@ const screenshot = async () => {
     }
   }, '.rbc-today');
 
+  await page.evaluate(sel => {
+    // eslint-disable-next-line
+    const elements = document.querySelectorAll(sel);
+    for (let i = 0; i < elements.length; i += 1) {
+      elements[i].style.display = 'none';
+    }
+  }, '.is-registered-false')
+
   for (let i = 0; i < 6; i += 1) {
     // eslint-disable-next-line
     await page.evaluate(sel => {
@@ -60,7 +68,7 @@ const screenshot = async () => {
     await page.evaluate(sel => {
       // eslint-disable-next-line
       const elements = document.querySelectorAll(sel);
-      for (let j = 0; j < elements.length; i += 1) {
+      for (let j = 0; j < elements.length; j += 1) {
         elements[j].style['z-index'] = '100';
       }
     }, '.rbc-btn-group');
