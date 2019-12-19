@@ -8,3 +8,5 @@ node_modules
 coverage
 eslint.json
 read*
+peda*
+fixError.js

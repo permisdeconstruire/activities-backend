@@ -4,6 +4,10 @@ const elasticsearch = require('./elasticsearch');
 
 const PDC_NAMESPACE = '7065726d-6973-6465-636f-6e7374727569';
 
+function uuid(string) {
+  return uuidv5(string, PDC_NAMESPACE);
+}
+
 async function fire(
   pilote,
   source,
@@ -43,12 +47,9 @@ async function fire(
   };
   if (forgeId !== false) {
     if (typeof forgeId === 'string') {
-      params.id = uuidv5(forgeId, PDC_NAMESPACE);
+      params.id = uuid(forgeId);
     } else {
-      params.id = uuidv5(
-        forgeId.reduce((acc, key) => `${acc}_${event[key]}`, ''),
-        PDC_NAMESPACE,
-      );
+      params.id = uuid(forgeId.reduce((acc, key) => `${acc}_${event[key]}`, ''));
     }
   }
 
@@ -58,4 +59,5 @@ async function fire(
 
 module.exports = {
   fire,
+  uuid,
 };

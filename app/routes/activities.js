@@ -268,6 +268,27 @@ const evaluateActivity = async (req, res) => {
   }
 };
 
+const getEvaluationActivity = async(req, res) => {
+  const activity = await elasticsearch.get(
+    `mongodb_${collection}`,
+    req.params.id,
+  );
+  const evaluations = [];
+  for(let i = 0; i < activity.pedagogy.length; i += 1) {
+    const pedagogy = activity.pedagogy[i];
+    const forgeId = event.uuid(`${req.params.piloteId}_${req.params.id}_${pedagogy.objective}_${activity.theme}_${activity.title}_${activity.end}`);
+    try {
+      const evaluation = await elasticsearch.get(`pdc`, forgeId);
+      evaluations.push({comment: evaluation.comment, evaluation: evaluation.data.evaluation});
+    } catch(e) {
+      evaluations.push({comment: '', evaluation: -1});
+    }
+
+  }
+  res.json(evaluations);
+
+}
+
 const deleteActivity = async (req, res) => {
   try {
     const result = await elasticsearch.delete(
@@ -287,6 +308,7 @@ module.exports = {
     router.get('/activities', publicListActivities);
     router.get('/pilote/activities', piloteListActivities);
     router.get('/cooperator/activities', cooperatorListActivities);
+    router.get('/cooperator/activities/id/:id/pilote/:piloteId', getEvaluationActivity);
     router.put('/cooperator/activities/id/:id', evaluateActivity);
 
     router.get('/admin/activities', adminListActivities);
