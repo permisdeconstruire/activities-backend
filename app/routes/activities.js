@@ -1,4 +1,5 @@
 const moment = require('moment');
+const jwt = require('jsonwebtoken');
 const event = require('../utils/event');
 const screenshot = require('../utils/screenshot');
 const elasticsearch = require('../utils/elasticsearch');
@@ -89,6 +90,26 @@ const publicDownloadActivities = async (req, res) => {
     res.json(500, 'Error');
   }
 };
+
+const impersonateDownloadActivities = async (req, res) => {
+  try {
+    const tokenOptions = {};
+    tokenOptions.issuer = process.env.JWT_ISSUER;
+    tokenOptions.audience = process.env.JWT_AUDIENCE;
+    tokenOptions.expiresIn = process.env.JWT_TTL;
+    const user = await elasticsearch.get(
+      'mongodb_pilotes',
+      req.params.id,
+    );
+    const token = encodeURIComponent(jwt.sign({email: user.email, id: 'impersonate'}, process.env.JWT_SECRET, tokenOptions))
+    console.log(`https://pilote.pdc.bug.builders/?token=${token}&hide=true`);
+    const agenda = await screenshot(`https://pilote.pdc.bug.builders/?token=${token}&hide=true`);
+    res.download(agenda);
+  } catch (e) {
+    console.log(e);
+    res.json(500, 'Error');
+  }
+}
 
 const publicListActivities = async (req, res) => {
   try {
@@ -317,5 +338,6 @@ module.exports = {
     router.put('/pilote/activities/id/:id', piloteRegisterActivity);
     router.put('/admin/activities/id/:id/pilote', adminRegisterActivity);
     router.delete('/admin/activities/id/:id', deleteActivity);
+    router.get('/admin/pilotes/id/:id/activities.pdf', impersonateDownloadActivities);
   },
 };
