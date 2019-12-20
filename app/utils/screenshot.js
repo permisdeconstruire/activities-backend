@@ -38,14 +38,6 @@ const screenshot = async (url = 'https://agenda.pdc.bug.builders/') => {
     }
   }, '.rbc-today');
 
-  await page.evaluate(sel => {
-    // eslint-disable-next-line
-    const elements = document.querySelectorAll(sel);
-    for (let i = 0; i < elements.length; i += 1) {
-      elements[i].style.display = 'none';
-    }
-  }, '.is-registered-false')
-
   for (let i = 0; i < 6; i += 1) {
     // eslint-disable-next-line
     await page.evaluate(sel => {
