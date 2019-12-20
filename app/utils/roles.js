@@ -17,6 +17,8 @@ const getUserInfo = async email => {
         userInfo.roles[roleName] = user._id;
         if (roleName === 'pilote') {
           userInfo.pseudo = user.pseudo;
+          userInfo.pillar = user.pillar;
+          userInfo.level = parseInt(user.level, 10);
         } else if (roleName === 'cooperator') {
           userInfo.titre = user.titre;
         } else {

@@ -10,3 +10,4 @@ eslint.json
 read*
 peda*
 fixError.js
+sms.js
