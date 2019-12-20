@@ -97,14 +97,13 @@ const impersonateDownloadActivities = async (req, res) => {
     tokenOptions.issuer = process.env.JWT_ISSUER;
     tokenOptions.audience = process.env.JWT_AUDIENCE;
     tokenOptions.expiresIn = process.env.JWT_TTL;
-    const user = await elasticsearch.get(
+    const pilote = await elasticsearch.get(
       'mongodb_pilotes',
       req.params.id,
     );
-    const token = encodeURIComponent(jwt.sign({email: user.email, id: 'impersonate'}, process.env.JWT_SECRET, tokenOptions))
-    console.log(`https://pilote.pdc.bug.builders/?token=${token}&hide=true`);
+    const token = encodeURIComponent(jwt.sign({email: pilote.email, id: 'impersonate'}, process.env.JWT_SECRET, tokenOptions))
     const agenda = await screenshot(`https://pilote.pdc.bug.builders/?token=${token}&hide=true`);
-    res.download(agenda);
+    res.download(agenda, `agenda_${pilote.pseudo}.pdf`);
   } catch (e) {
     console.log(e);
     res.json(500, 'Error');
