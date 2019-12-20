@@ -1,3 +1,5 @@
+const url = require('url');
+const querystring = require('querystring');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 const router = require('express').Router();
@@ -14,6 +16,9 @@ tokenOptions.audience = process.env.JWT_AUDIENCE;
 tokenOptions.expiresIn = process.env.JWT_TTL;
 
 router.get('/callback', (req, res, next) => {
+  const returnTo = req.session.returnTo
+    ? req.session.returnTo
+    : process.env.DEFAULT_RETURNTO;
   passport.authenticate('auth0', (err, user) => {
     if (err) {
       return next(err);
@@ -26,7 +31,7 @@ router.get('/callback', (req, res, next) => {
         return next(err2);
       }
       return res.redirect(
-        `${req.session.returnTo}/?token=${encodeURIComponent(
+        `${returnTo}?token=${encodeURIComponent(
           jwt.sign(user, process.env.JWT_SECRET, tokenOptions),
         )}`,
       );
@@ -35,7 +40,17 @@ router.get('/callback', (req, res, next) => {
 });
 
 function saveOrigin(req, res, next) {
-  req.session.returnTo = req.header('Referer');
+  const allowedReturns = process.env.ALLOW_RETURNTO.split(',');
+  req.session.returnTo = process.env.DEFAULT_RETURNTO;
+
+  if (typeof req.header('Referer') !== 'undefined') {
+    const isAllowed = allowedReturns.find(a =>
+      req.header('Referer').startsWith(a),
+    );
+    if (typeof isAllowed !== 'undefined') {
+      req.session.returnTo = req.header('Referer');
+    }
+  }
   next();
 }
 
@@ -50,6 +65,36 @@ router.get(
   saveOrigin,
   passport.authenticate('auth0', { scope: 'openid email profile' }),
 );
+
+router.get('/logout', (req, res) => {
+  req.logout();
+
+  const allowedReturns = process.env.ALLOW_RETURNTO.split(',');
+  let returnTo = process.env.DEFAULT_RETURNTO;
+
+  if (typeof req.header('Referer') !== 'undefined') {
+    const isAllowed = allowedReturns.find(a =>
+      req.header('Referer').startsWith(a),
+    );
+    if (typeof isAllowed !== 'undefined') {
+      returnTo = req
+        .header('Referer')
+        .replace('logout', '')
+        .replace('verifier-mail', '');
+    }
+  }
+
+  const logoutURL = new url.URL(
+    `https://${process.env.AUTH0_DOMAIN}/v2/logout`,
+  );
+  const searchString = querystring.stringify({
+    client_id: process.env.AUTH0_CLIENTID,
+    returnTo,
+  });
+  logoutURL.search = searchString;
+
+  res.redirect(logoutURL);
+});
 
 router.all(
   '/pilote/*',
