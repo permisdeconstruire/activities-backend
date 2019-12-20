@@ -77,7 +77,7 @@ const piloteListActivities = async (req, res) => {
 const publicDownloadActivities = async (req, res) => {
   try {
     if(req.query.token) {
-      const agenda = await screenshot(`https://pilote.pdc.bug.builders/?token=${req.query.token}`);
+      const agenda = await screenshot(`https://pilote.pdc.bug.builders/?token=${req.query.token}#hide`);
       res.download(agenda);
     } else {
       const agenda = await screenshot();
