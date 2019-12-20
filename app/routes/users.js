@@ -1,4 +1,5 @@
 const moment = require('moment');
+const jwt = require('jsonwebtoken');
 const elasticsearch = require('../utils/elasticsearch');
 const event = require('../utils/event');
 
@@ -237,6 +238,24 @@ const deleteUser = async (req, res, collection) => {
   }
 };
 
+const impersonateCooperator = async(req, res) => {
+  try {
+    const tokenOptions = {};
+    tokenOptions.issuer = process.env.JWT_ISSUER;
+    tokenOptions.audience = process.env.JWT_AUDIENCE;
+    tokenOptions.expiresIn = process.env.JWT_TTL;
+    const cooperator = await elasticsearch.get(
+      'mongodb_cooperators',
+      req.params.id,
+    );
+    const token = encodeURIComponent(jwt.sign({email: cooperator.email, id: 'impersonate'}, process.env.JWT_SECRET, tokenOptions))
+    res.redirect(`https://cooperateur.pdc.bug.builders/?token=${token}`);
+  } catch(err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
+};
+
 const getPilote = async (req, res) => {
   try {
     const {pillar, level} = await elasticsearch.get(`mongodb_pilotes`, req.params.id);
@@ -339,6 +358,7 @@ module.exports = {
     router.post('/admin/cooperators', newCooperator);
     router.put('/admin/cooperators/id/:id', editCooperator);
     router.delete('/admin/cooperators/id/:id', deleteCooperator);
+    router.get('/admin/cooperators/id/:id', impersonateCooperator);
 
     router.get('/admin/users', listUsers);
     router.post('/admin/users', newUser);
