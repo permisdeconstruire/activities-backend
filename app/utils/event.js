@@ -49,7 +49,9 @@ async function fire(
     if (typeof forgeId === 'string') {
       params.id = uuid(forgeId);
     } else {
-      params.id = uuid(forgeId.reduce((acc, key) => `${acc}_${event[key]}`, ''));
+      params.id = uuid(
+        forgeId.reduce((acc, key) => `${acc}_${event[key]}`, ''),
+      );
     }
   }
 

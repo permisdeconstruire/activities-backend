@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const elasticsearch = require('../utils/elasticsearch');
 const event = require('../utils/event');
 
-const alreadyExistQuery = ({prenom, nom, ph_datenaissance}) => ({
+const alreadyExistQuery = ({ prenom, nom, ph_datenaissance }) => ({
   query: {
     bool: {
       must: [
@@ -15,16 +15,16 @@ const alreadyExistQuery = ({prenom, nom, ph_datenaissance}) => ({
         {
           term: {
             nom,
-          }
+          },
         },
         {
           term: {
             ph_datenaissance,
-          }
-        }
-      ]
-    }
-  }
+          },
+        },
+      ],
+    },
+  },
 });
 
 const listUsers = async (req, res, collection) => {
@@ -76,7 +76,7 @@ const newUser = async (req, res, collection) => {
   try {
     if (collection === 'pilotes') {
       let pseudo = `${req.body.prenom} ${req.body.nom}`;
-      if(req.body.pseudo !== '') {
+      if (req.body.pseudo !== '') {
         pseudo = req.body.pseudo;
       }
       const fullUser = req.body;
@@ -93,10 +93,12 @@ const newUser = async (req, res, collection) => {
       });
       let alreadyExist = [];
       try {
-        alreadyExist = await elasticsearch.search(`mongodb_${collection}`, alreadyExistQuery(fullUser));
-      } catch(e) {
-      }
-      if(alreadyExist.length === 0) {
+        alreadyExist = await elasticsearch.search(
+          `mongodb_${collection}`,
+          alreadyExistQuery(fullUser),
+        );
+      } catch (e) {}
+      if (alreadyExist.length === 0) {
         const {
           body: { _id },
         } = await elasticsearch.index(`mongodb_${collection}`, {
@@ -109,7 +111,7 @@ const newUser = async (req, res, collection) => {
       }
     } else if (collection === 'cooperators') {
       let titre = `${req.body.prenom} ${req.body.nom}, ${req.body.fonction}`;
-      if(req.body.titre !== '') {
+      if (req.body.titre !== '') {
         titre = req.body.titre;
       }
       const {
@@ -126,7 +128,7 @@ const newUser = async (req, res, collection) => {
       res.json(_id);
     }
   } catch (err) {
-    if(err.message === 'PiloteAlreadyExists') {
+    if (err.message === 'PiloteAlreadyExists') {
       res.json(500, 'PiloteAlreadyExists');
     } else {
       console.error(err);
@@ -156,16 +158,23 @@ const editUser = async (req, res, collection) => {
     });
 
     if (collection === 'cooperators') {
-      if(req.body.titre === '') {
-        fullUser.titre = `${req.body.prenom} ${req.body.nom}, ${req.body.fonction}`;
+      if (req.body.titre === '') {
+        fullUser.titre = `${req.body.prenom} ${req.body.nom}, ${
+          req.body.fonction
+        }`;
       }
     } else if (collection === 'pilotes') {
       let alreadyExist = [];
       try {
-        alreadyExist = await elasticsearch.search(`mongodb_${collection}`, alreadyExistQuery(fullUser));
-      } catch(e) {
-      }
-      if(alreadyExist.length === 0 || (alreadyExist.length === 1 && alreadyExist[0]._id === req.params.id)) {
+        alreadyExist = await elasticsearch.search(
+          `mongodb_${collection}`,
+          alreadyExistQuery(fullUser),
+        );
+      } catch (e) {}
+      if (
+        alreadyExist.length === 0 ||
+        (alreadyExist.length === 1 && alreadyExist[0]._id === req.params.id)
+      ) {
         const eventPromises = [];
         Object.keys(fullUser).forEach(field => {
           if (typeof oldUser[field] === 'undefined') {
@@ -198,7 +207,7 @@ const editUser = async (req, res, collection) => {
           }
         });
         await Promise.all(eventPromises);
-        if(req.body.pseudo === '') {
+        if (req.body.pseudo === '') {
           fullUser.pseudo = `${req.body.prenom} ${req.body.nom}`;
         }
       } else {
@@ -213,11 +222,11 @@ const editUser = async (req, res, collection) => {
     );
     res.json(result);
   } catch (err) {
-    if(err.message === 'PiloteAlreadyExists') {
+    if (err.message === 'PiloteAlreadyExists') {
       res.json(500, 'PiloteAlreadyExists');
     } else {
       console.error(err);
-      if(typeof(err.meta) !== 'undefined') {
+      if (typeof err.meta !== 'undefined') {
         console.log(err.meta.body.error);
       }
       res.json(500, 'Error');
@@ -238,7 +247,7 @@ const deleteUser = async (req, res, collection) => {
   }
 };
 
-const impersonateCooperator = async(req, res) => {
+const impersonateCooperator = async (req, res) => {
   try {
     const tokenOptions = {};
     tokenOptions.issuer = process.env.JWT_ISSUER;
@@ -248,9 +257,15 @@ const impersonateCooperator = async(req, res) => {
       'mongodb_cooperators',
       req.params.id,
     );
-    const token = encodeURIComponent(jwt.sign({email: cooperator.email, id: 'impersonate'}, process.env.JWT_SECRET, tokenOptions))
+    const token = encodeURIComponent(
+      jwt.sign(
+        { email: cooperator.email, id: 'impersonate' },
+        process.env.JWT_SECRET,
+        tokenOptions,
+      ),
+    );
     res.redirect(`https://cooperateur.pdc.bug.builders/?token=${token}`);
-  } catch(err) {
+  } catch (err) {
     console.error(err);
     res.json(500, 'Error');
   }
@@ -258,7 +273,10 @@ const impersonateCooperator = async(req, res) => {
 
 const getPilote = async (req, res) => {
   try {
-    const {pillar, level} = await elasticsearch.get(`mongodb_pilotes`, req.params.id);
+    const { pillar, level } = await elasticsearch.get(
+      `mongodb_pilotes`,
+      req.params.id,
+    );
     const objectives = await elasticsearch.search('mongodb_pedagogy', {
       query: {
         bool: {
@@ -271,11 +289,11 @@ const getPilote = async (req, res) => {
             {
               term: {
                 level,
-              }
-            }
-          ]
-        }
-      }
+              },
+            },
+          ],
+        },
+      },
     });
 
     const evaluated = await elasticsearch.search('pdc', {
@@ -290,28 +308,34 @@ const getPilote = async (req, res) => {
             {
               term: {
                 'data.activity.status': pillar,
-              }
+              },
             },
             {
               term: {
                 'data.activity.level': level,
-              }
+              },
             },
             {
               term: {
                 'pilote._id': req.params.id,
-              }
-            }
-          ]
-        }
-      }
-    })
-    res.json({evaluated: evaluated.map(e => ({objective: e.data.objective, evaluation: e.data.evaluation})), objectives});
-  } catch(err) {
+              },
+            },
+          ],
+        },
+      },
+    });
+    res.json({
+      evaluated: evaluated.map(e => ({
+        objective: e.data.objective,
+        evaluation: e.data.evaluation,
+      })),
+      objectives,
+    });
+  } catch (err) {
     console.error(err);
-    res.json({evaluated: [], objectives: []});
+    res.json({ evaluated: [], objectives: [] });
   }
-}
+};
 
 const listPilotes = async (req, res) => {
   listUsers(req, res, 'pilotes');

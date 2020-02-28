@@ -77,14 +77,15 @@ const piloteListActivities = async (req, res) => {
 
 const publicDownloadActivities = async (req, res) => {
   try {
-    if(req.query.token) {
-      const agenda = await screenshot(`https://pilote.pdc.bug.builders/?token=${req.query.token}&hide=true`);
+    if (req.query.token) {
+      const agenda = await screenshot(
+        `https://pilote.pdc.bug.builders/?token=${req.query.token}&hide=true`,
+      );
       res.download(agenda);
     } else {
       const agenda = await screenshot();
       res.download(agenda);
     }
-
   } catch (e) {
     console.log(e);
     res.json(500, 'Error');
@@ -97,18 +98,23 @@ const impersonateDownloadActivities = async (req, res) => {
     tokenOptions.issuer = process.env.JWT_ISSUER;
     tokenOptions.audience = process.env.JWT_AUDIENCE;
     tokenOptions.expiresIn = process.env.JWT_TTL;
-    const pilote = await elasticsearch.get(
-      'mongodb_pilotes',
-      req.params.id,
+    const pilote = await elasticsearch.get('mongodb_pilotes', req.params.id);
+    const token = encodeURIComponent(
+      jwt.sign(
+        { email: pilote.email, id: 'impersonate' },
+        process.env.JWT_SECRET,
+        tokenOptions,
+      ),
     );
-    const token = encodeURIComponent(jwt.sign({email: pilote.email, id: 'impersonate'}, process.env.JWT_SECRET, tokenOptions))
-    const agenda = await screenshot(`https://pilote.pdc.bug.builders/?token=${token}&hide=true`);
+    const agenda = await screenshot(
+      `https://pilote.pdc.bug.builders/?token=${token}&hide=true`,
+    );
     res.download(agenda, `agenda_${pilote.pseudo}.pdf`);
   } catch (e) {
     console.log(e);
     res.json(500, 'Error');
   }
-}
+};
 
 const publicListActivities = async (req, res) => {
   try {
@@ -138,6 +144,20 @@ const newActivity = async (req, res) => {
     res.json(_id);
   } catch (err) {
     console.error(err);
+    res.json(500, 'Error');
+  }
+};
+
+const editActivityComment = async (req, res) => {
+  try {
+    const result = await elasticsearch.update(
+      `mongodb_${collection}`,
+      req.params.id,
+      { cooperatorComments: req.body.comments },
+    );
+    res.json(result);
+  } catch (err) {
+    console.error(JSON.stringify(err, '', 2));
     res.json(500, 'Error');
   }
 };
@@ -288,26 +308,42 @@ const evaluateActivity = async (req, res) => {
   }
 };
 
-const getEvaluationActivity = async(req, res) => {
+const getEvaluationActivity = async (req, res) => {
   const activity = await elasticsearch.get(
     `mongodb_${collection}`,
     req.params.id,
   );
   const evaluations = [];
-  for(let i = 0; i < activity.pedagogy.length; i += 1) {
+  for (let i = 0; i < activity.pedagogy.length; i += 1) {
     const pedagogy = activity.pedagogy[i];
-    const forgeId = event.uuid(`${req.params.piloteId}_${req.params.id}_${pedagogy.objective}_${activity.theme}_${activity.title}_${activity.end}`);
+    const forgeId = event.uuid(
+      `${req.params.piloteId}_${req.params.id}_${pedagogy.objective}_${
+        activity.theme
+      }_${activity.title}_${activity.end}`,
+    );
     try {
       const evaluation = await elasticsearch.get(`pdc`, forgeId);
-      evaluations.push({comment: evaluation.comment, evaluation: evaluation.data.evaluation});
-    } catch(e) {
-      evaluations.push({comment: '', evaluation: -1});
+      evaluations.push({
+        comment: evaluation.comment,
+        evaluation: evaluation.data.evaluation,
+      });
+    } catch (e) {
+      evaluations.push({ comment: '', evaluation: -1 });
     }
-
   }
-  res.json(evaluations);
 
-}
+  const forgeId = event.uuid(
+    `${req.params.piloteId}_${req.params.id}_Commentaire global_${
+      activity.theme
+    }_${activity.title}_${activity.end}`,
+  );
+  let globalPiloteComments = '';
+  try {
+    const evaluation = await elasticsearch.get(`pdc`, forgeId);
+    globalPiloteComments = evaluation.comment;
+  } catch (e) {}
+  res.json({ evaluations, globalPiloteComments });
+};
 
 const deleteActivity = async (req, res) => {
   try {
@@ -328,8 +364,12 @@ module.exports = {
     router.get('/activities', publicListActivities);
     router.get('/pilote/activities', piloteListActivities);
     router.get('/cooperator/activities', cooperatorListActivities);
-    router.get('/cooperator/activities/id/:id/pilote/:piloteId', getEvaluationActivity);
+    router.get(
+      '/cooperator/activities/id/:id/pilote/:piloteId',
+      getEvaluationActivity,
+    );
     router.put('/cooperator/activities/id/:id', evaluateActivity);
+    router.put('/cooperator/activities/id/:id/comment', editActivityComment);
 
     router.get('/admin/activities', adminListActivities);
     router.post('/admin/activities', newActivity);
@@ -337,6 +377,9 @@ module.exports = {
     router.put('/pilote/activities/id/:id', piloteRegisterActivity);
     router.put('/admin/activities/id/:id/pilote', adminRegisterActivity);
     router.delete('/admin/activities/id/:id', deleteActivity);
-    router.get('/admin/pilotes/id/:id/activities.pdf', impersonateDownloadActivities);
+    router.get(
+      '/admin/pilotes/id/:id/activities.pdf',
+      impersonateDownloadActivities,
+    );
   },
 };
