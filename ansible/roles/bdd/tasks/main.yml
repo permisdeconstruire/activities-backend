@@ -1,0 +1,74 @@
+- name: add certbot repo
+  apt_repository:
+    repo: ppa:certbot/certbot
+    state: present
+  tags: install
+
+- name: Add openresty apt signing key
+  apt_key:
+    url: https://openresty.org/package/pubkey.gpg
+    state: present
+  tags: install
+
+- name: Add openresty repository for apt
+  apt_repository:
+    repo: deb http://openresty.org/package/ubuntu xenial main
+    state: present
+  tags: install
+
+- name: Install dependancies
+  package:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  loop:
+    - openresty
+    - software-properties-common
+    - jq
+    - certbot
+    - python-certbot-nginx
+    - python3-passlib
+    - python3-pip
+    - autoconf
+    - libtool
+  tags: install
+
+- name: Create elasticsearch directory
+  file:
+    path: /opt/elasticsearch
+    state: directory
+    owner: "1000"
+    group: "1000"
+  tags: install
+
+- name: Copy docker-compose
+  copy:
+    src: docker-compose.yml
+    dest: /opt/docker-compose.yml
+  register: docker_compose
+  tags: install, pipelines
+
+- name: "Restart bdd"
+  command:
+    chdir: /opt
+    cmd: docker-compose up -d
+  when: docker_compose.changed
+  tags: install, pipelines
+
+- name: Copy backup.sh
+  copy:
+    src: backup.sh
+    dest: /opt/backup.sh
+  tags: install
+
+- name: Run backup.sh every
+  cron:
+    name: "backup bdd"
+    minute: "0"
+    hour: "0"
+    job: "/bin/bash /opt/backup.sh > /tmp/backup_stdout"
+  tags: install
+
+# - import_tasks: index-configuration.yml
+
+- import_tasks: openresty.yml

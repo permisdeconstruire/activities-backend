@@ -1,0 +1,37 @@
+# - name: "Wait for elasticsearch"
+#   uri:
+#     url: "http://127.0.0.1:9200/_cluster/health"
+#     status_code: 200
+#   register: result
+#   # when using real cluster, green is when replica is spread across cluster
+#   until: result.json is defined and (result.json.status == "green" or result.json.status == "yellow")
+#   retries: 60
+#   delay: 1
+#   tags: elasticsearch
+
+# - name: "Check root template version"
+#   uri:
+#     url: "http://127.0.0.1:9200/_template/root"
+#     status_code:
+#       - 200
+#       - 404
+#   register: root_template
+#   tags: elasticsearch
+
+# - name: Lookup root.json
+#   set_fact:
+#     root: "{{ lookup('file', 'templates/root.json') | from_json }}"
+#   tags: elasticsearch
+
+# - name: "Deploy root template"
+#   uri:
+#     url: "http://127.0.0.1:9200/_template/root"
+#     body_format: json
+#     method: PUT
+#     body: "{{ lookup('file', 'templates/root.json') }}"
+#   when: >
+#     root_template.json.root.version is not defined
+#     or root_template.json.root.version != root.version
+#   changed_when: true
+#   tags: elasticsearch
+

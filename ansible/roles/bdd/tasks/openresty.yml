@@ -1,0 +1,69 @@
+- name: OPM install required packages
+  command: "opm install {{ item }}"
+  register: opm_install
+  changed_when: not "already installed." in opm_install.stderr
+  loop:
+    - pintsized/lua-resty-http
+    - bungle/lua-resty-session
+    - zmartzone/lua-resty-openidc
+  tags: openresty
+  notify: restart openresty
+
+- name: Copy openresty nginx config
+  copy:
+    src: openresty/nginx.conf
+    dest: /etc/openresty/nginx.conf
+    owner: root
+    group: root
+    mode: 0644
+  tags: openresty
+  notify: restart openresty
+
+- name: Create openresty sites directory
+  file:
+    path: "/etc/openresty/conf.d"
+    state: directory
+  tags: openresty
+  notify: restart openresty
+
+- name: Create symlink /var/log/openresty
+  file:
+    src: /usr/local/openresty/nginx/logs/
+    dest: /var/log/openresty
+    owner: root
+    group: root
+    state: link
+  tags: openresty
+  notify: restart openresty
+
+- name: Create elasticsearch htpasswd
+  htpasswd:
+    path: /etc/openresty/elasticsearch.htpasswd
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    group: www-data
+    mode: 0640
+  with_items: "{{ elasticsearch_htpasswd }}"
+  tags: openresty
+  notify: restart openresty
+
+- name: Copy site configs
+  copy:
+    src: openresty/{{item}}
+    dest: /etc/openresty/conf.d/
+  with_items:
+    - admin.pdc.bug.builders.conf
+    - agenda.pdc.bug.builders.conf
+    - api.pdc.bug.builders.conf
+    - cooperateur.pdc.bug.builders.conf
+    - elasticsearch.pdc.bug.builders.conf
+    - pilote.pdc.bug.builders.conf
+  tags: openresty
+  notify: restart openresty
+
+- name: Create kibana config
+  template:
+    src: openresty/kibana.pdc.bug.builders.conf.j2
+    dest: /etc/openresty/conf.d/kibana.pdc.bug.builders.conf
+  tags: openresty, sso
+  notify: restart openresty
