@@ -7,6 +7,8 @@ const activities = require('./activities');
 const forms = require('./forms');
 const users = require('./users');
 const pedagogy = require('./pedagogy');
+const parcours = require('./parcours');
+const promotions = require('./promotions');
 const events = require('./events');
 const roles = require('../utils/roles');
 
@@ -143,6 +145,8 @@ activities.create(router);
 forms.create(router);
 users.create(router);
 pedagogy.create(router);
+parcours.create(router);
+promotions.create(router);
 events.create(router);
 
 module.exports = router;

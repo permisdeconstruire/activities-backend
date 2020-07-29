@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 const cp = require('child_process');
 
-const screenshot = async (url = 'https://agenda.pdc.bug.builders/') => {
+const screenshot = async (url = 'https://agenda.nantes.assopermisdeconstruire.org/') => {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   const pages = [];

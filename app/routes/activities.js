@@ -79,7 +79,7 @@ const publicDownloadActivities = async (req, res) => {
   try {
     if (req.query.token) {
       const agenda = await screenshot(
-        `https://pilote.pdc.bug.builders/?token=${req.query.token}&hide=true`,
+        `https://pilote.nantes.assopermisdeconstruire.org/?token=${req.query.token}&hide=true`,
       );
       res.download(agenda);
     } else {
@@ -107,7 +107,7 @@ const impersonateDownloadActivities = async (req, res) => {
       ),
     );
     const agenda = await screenshot(
-      `https://pilote.pdc.bug.builders/?token=${token}&hide=true`,
+      `https://pilote.nantes.assopermisdeconstruire.org/?token=${token}&hide=true`,
     );
     res.download(agenda, `agenda_${pilote.pseudo}.pdf`);
   } catch (e) {
