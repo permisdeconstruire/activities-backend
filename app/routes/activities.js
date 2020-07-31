@@ -6,12 +6,71 @@ const elasticsearch = require('../utils/elasticsearch');
 
 const collection = 'activities';
 
+const adminListPromotionActivities = async (req, res) => {
+  try {
+    const activities = await elasticsearch.search(`mongodb_${collection}`, {
+      query: {
+        term: {
+          'promotion._id': req.params.promotionId
+        }
+      },
+    });
+
+    res.json(activities)
+  } catch(e) {
+    res.status(500).json('Error');
+  }
+}
+
+const adminListEvaluationPilote = async (req, res) => {
+  try {
+    const evaluations = await elasticsearch.search('pdc', {
+      query: {
+        bool: {
+          must: [
+            {
+              term: {
+                type: 'evaluation',
+              },
+            },
+            {
+              term: {
+                'pilote._id': req.params.piloteId,
+              },
+            },
+            {
+              term: {
+                'data.activity.promotion._id': req.params.promotionId,
+              },
+            },
+            {
+              range: {
+                date: {
+                  gte: req.query.startDate,
+                }
+              }
+            }
+          ]
+        }
+      },
+    });
+
+    res.json(evaluations.map(e => ({
+      evaluation: e.data.evaluation,
+      objective: e.data.objective,
+    })))
+  } catch(e) {
+    console.error(e.meta.body.error);
+    res.status(500).json('Error');
+  }
+}
+
 const listActivities = async () => {
   const activities = await elasticsearch.search(`mongodb_${collection}`, {
     query: {
       range: {
         start: {
-          gte: "now-90d/d"
+          gte: 'now-90d/d'
         }
       }
     },
@@ -402,6 +461,7 @@ const deleteActivity = async (req, res) => {
   }
 };
 
+
 module.exports = {
   create: router => {
     router.get('/activities.pdf', publicDownloadActivities);
@@ -424,6 +484,14 @@ module.exports = {
     router.get(
       '/admin/pilotes/id/:id/activities.pdf',
       impersonateDownloadActivities,
+    );
+    router.get(
+      '/admin/activities/promotion/:promotionId',
+      adminListPromotionActivities,
+    );
+    router.get(
+      '/admin/activities/promotion/:promotionId/pilote/:piloteId',
+      adminListEvaluationPilote,
     );
   },
 };
