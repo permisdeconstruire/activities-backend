@@ -2,7 +2,7 @@
 source /dev/null
 cd /root
 
-indices=( "mongodb_pedagogy" "mongodb_activities" "mongodb_pilotes" "mongodb_copilotes" "mongodb_forms" "mongodb_cooperators" "pdc" )
+indices=( "mongodb_promotions" "mongodb_parcours" "mongodb_pedagogy" "mongodb_activities" "mongodb_pilotes" "mongodb_copilotes" "mongodb_forms" "mongodb_cooperators" "pdc" )
 export BOTO_CONFIG="/root/.boto"
 
 for i in "${indices[@]}"
