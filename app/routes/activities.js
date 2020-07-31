@@ -8,7 +8,13 @@ const collection = 'activities';
 
 const listActivities = async () => {
   const activities = await elasticsearch.search(`mongodb_${collection}`, {
-    query: { match_all: {} },
+    query: {
+      range: {
+        start: {
+          gte: "now-90d/d"
+        }
+      }
+    },
   });
   activities.sort((a, b) => {
     if (moment(a.start).isBefore(moment(b.start))) {
@@ -79,7 +85,9 @@ const publicDownloadActivities = async (req, res) => {
   try {
     if (req.query.token) {
       const agenda = await screenshot(
-        `https://pilote.nantes.assopermisdeconstruire.org/?token=${req.query.token}&hide=true`,
+        `https://pilote.nantes.assopermisdeconstruire.org/?token=${
+          req.query.token
+        }&hide=true`,
       );
       res.download(agenda);
     } else {
@@ -178,10 +186,17 @@ const editActivity = async (req, res) => {
 
 const registerActivity = async (
   activityId,
-  pilote,
+  rPilote,
   body,
   who = { _id: 'application' },
 ) => {
+  let pilotes;
+  if(Array.isArray(rPilote)) {
+    pilotes = rPilote;
+  } else {
+    pilotes = [rPilote];
+  }
+
   const activity = await elasticsearch.get(`mongodb_${collection}`, activityId);
   if (typeof activity.participants === 'undefined') {
     activity.participants = [];
@@ -192,38 +207,40 @@ const registerActivity = async (
     forbidden.push('Individuelle');
   }
   if (forbidden.indexOf(activity.status) === -1) {
-    const participantIndex = activity.participants.findIndex(
-      participant => participant._id === pilote._id,
-    );
-    if (body.action === 'register') {
-      if (participantIndex === -1) {
-        activity.participants.push({
-          _id: pilote._id,
-          pseudo: pilote.pseudo,
-          pedagogy: body.pedagogy,
-        });
-      }
-      await event.fire(
-        { _id: pilote._id, pseudo: pilote.pseudo },
-        who,
-        'activity',
-        '',
-        {
-          activity,
-          subType: 'register',
-        },
+    for(let i = 0; i < pilotes.length; i += 1) {
+      const pilote = pilotes[i];
+      const participantIndex = activity.participants.findIndex(
+        participant => participant._id === pilote._id,
       );
-    } else {
-      if (participantIndex !== -1) {
-        activity.participants.splice(participantIndex, 1);
+      if (body.action === 'register') {
+        if (participantIndex === -1) {
+          activity.participants.push({
+            _id: pilote._id,
+            pseudo: pilote.pseudo,
+          });
+          await event.fire(
+            { _id: pilote._id, pseudo: pilote.pseudo },
+            who,
+            'activity',
+            '',
+            {
+              activity,
+              subType: 'register',
+            },
+          );
+        }
+      } else {
+        if (participantIndex !== -1) {
+          activity.participants.splice(participantIndex, 1);
+          await event.fire(
+            { _id: pilote._id, pseudo: pilote.pseudo },
+            who,
+            'activity',
+            body.justification,
+            { activity, subType: 'unregister' },
+          );
+        }
       }
-      await event.fire(
-        { _id: pilote._id, pseudo: pilote.pseudo },
-        who,
-        'activity',
-        body.justification,
-        { activity, subType: 'unregister' },
-      );
     }
     const result = await elasticsearch.update(
       `mongodb_${collection}`,
@@ -240,7 +257,7 @@ const adminRegisterActivity = async (req, res) => {
     const result = await registerActivity(
       req.params.id,
       req.body.pilote,
-      { action: req.body.action, justification: '', pedagogy: [] },
+      { action: req.body.action, justification: ''},
       { _id: req.user.roles.copilote, email: req.user.email },
     );
     res.json(result);

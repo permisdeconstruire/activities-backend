@@ -26,6 +26,19 @@ const newParcours = async (req, res) => {
   }
 };
 
+const getParcours = async (req, res) => {
+  try {
+    const parcours = await elasticsearch.get(
+      `mongodb_${collection}`,
+      req.params.id,
+    );
+    res.json(parcours);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
+};
+
 const editParcours = async (req, res) => {
   try {
     const result = await elasticsearch.update(
@@ -56,6 +69,7 @@ const deleteParcours = async (req, res) => {
 module.exports = {
   create: router => {
     router.get('/admin/parcours', listParcours);
+    router.get('/admin/parcours/id/:id', getParcours);
     router.post('/admin/parcours', newParcours);
     router.put('/admin/parcours/id/:id', editParcours);
     router.delete('/admin/parcours/id/:id', deleteParcours);

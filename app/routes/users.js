@@ -264,7 +264,9 @@ const impersonateCooperator = async (req, res) => {
         tokenOptions,
       ),
     );
-    res.redirect(`https://cooperateur.nantes.assopermisdeconstruire.org/?token=${token}`);
+    res.redirect(
+      `https://cooperateur.nantes.assopermisdeconstruire.org/?token=${token}`,
+    );
   } catch (err) {
     console.error(err);
     res.json(500, 'Error');
