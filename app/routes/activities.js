@@ -331,21 +331,44 @@ const getEvaluationActivity = async (req, res) => {
     req.params.id,
   );
   const evaluations = [];
-  for (let i = 0; i < activity.pedagogy.length; i += 1) {
-    const pedagogy = activity.pedagogy[i];
-    const forgeId = event.uuid(
-      `${req.params.piloteId}_${req.params.id}_${pedagogy.objective}_${
-        activity.theme
-      }_${activity.title}_${activity.end}`,
-    );
-    try {
-      const evaluation = await elasticsearch.get(`pdc`, forgeId);
-      evaluations.push({
-        comment: evaluation.comment,
-        evaluation: evaluation.data.evaluation,
-      });
-    } catch (e) {
-      evaluations.push({ comment: '', evaluation: -1 });
+
+  if(typeof(activity.pedagogy) !== 'undefined') {
+    for (let i = 0; i < activity.pedagogy.length; i += 1) {
+      const pedagogy = activity.pedagogy[i];
+      const forgeId = event.uuid(
+        `${req.params.piloteId}_${req.params.id}_${pedagogy.objective}_${
+          activity.theme
+        }_${activity.title}_${activity.end}`,
+      );
+      try {
+        const evaluation = await elasticsearch.get(`pdc`, forgeId);
+        evaluations.push({
+          comment: evaluation.comment,
+          evaluation: evaluation.data.evaluation,
+        });
+      } catch (e) {
+        evaluations.push({ comment: '', evaluation: -1 });
+      }
+    }
+  }
+
+  if(typeof(activity.objectives) !== 'undefined') {
+    for (let i = 0; i < activity.objectives.length; i += 1) {
+      const objective = activity.objectives[i];
+      const forgeId = event.uuid(
+        `${req.params.piloteId}_${req.params.id}_${objective}_${
+          activity.theme
+        }_${activity.title}_${activity.end}`,
+      );
+      try {
+        const evaluation = await elasticsearch.get(`pdc`, forgeId);
+        evaluations.push({
+          comment: evaluation.comment,
+          evaluation: evaluation.data.evaluation,
+        });
+      } catch (e) {
+        evaluations.push({ comment: '', evaluation: -1 });
+      }
     }
   }
 
