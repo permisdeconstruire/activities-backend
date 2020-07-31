@@ -14,6 +14,18 @@ const listParcours = async (req, res) => {
   }
 };
 
+const getParcoursByTitle = async (req, res) => {
+  try {
+    const parcours = await elasticsearch.search(`mongodb_${collection}`, {
+      query: { term: {title: req.params.title} },
+    });
+    res.json(parcours);
+  } catch (err) {
+    console.error(err);
+    res.json(500, 'Error');
+  }
+}
+
 const newParcours = async (req, res) => {
   try {
     const {
@@ -70,6 +82,7 @@ module.exports = {
   create: router => {
     router.get('/admin/parcours', listParcours);
     router.get('/admin/parcours/id/:id', getParcours);
+    router.get('/admin/parcours/title/:title', getParcoursByTitle);
     router.post('/admin/parcours', newParcours);
     router.put('/admin/parcours/id/:id', editParcours);
     router.delete('/admin/parcours/id/:id', deleteParcours);

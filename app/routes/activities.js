@@ -31,7 +31,7 @@ const adminListActivities = async (req, res) => {
     res.json(activities);
   } catch (err) {
     console.error(err);
-    res.json(500, 'Error');
+    res.status(500).json('Error');
   }
 };
 
@@ -321,7 +321,7 @@ const evaluateActivity = async (req, res) => {
     }
     res.json('Ok');
   } else {
-    res.json(403, 'Impossible');
+    res.status(403).json('Impossible');
   }
 };
 
@@ -330,59 +330,63 @@ const getEvaluationActivity = async (req, res) => {
     `mongodb_${collection}`,
     req.params.id,
   );
-  const evaluations = [];
+  if(typeof(activity.cooperators.find(c => c._id === req.user.roles.cooperator)) === 'undefined') {
+    res.status(403).json('Impossible');
+  } else {
+    const evaluations = [];
 
-  if(typeof(activity.pedagogy) !== 'undefined') {
-    for (let i = 0; i < activity.pedagogy.length; i += 1) {
-      const pedagogy = activity.pedagogy[i];
-      const forgeId = event.uuid(
-        `${req.params.piloteId}_${req.params.id}_${pedagogy.objective}_${
-          activity.theme
-        }_${activity.title}_${activity.end}`,
-      );
-      try {
-        const evaluation = await elasticsearch.get(`pdc`, forgeId);
-        evaluations.push({
-          comment: evaluation.comment,
-          evaluation: evaluation.data.evaluation,
-        });
-      } catch (e) {
-        evaluations.push({ comment: '', evaluation: -1 });
+    if(typeof(activity.pedagogy) !== 'undefined') {
+      for (let i = 0; i < activity.pedagogy.length; i += 1) {
+        const pedagogy = activity.pedagogy[i];
+        const forgeId = event.uuid(
+          `${req.params.piloteId}_${req.params.id}_${pedagogy.objective}_${
+            activity.theme
+          }_${activity.title}_${activity.end}`,
+        );
+        try {
+          const evaluation = await elasticsearch.get(`pdc`, forgeId);
+          evaluations.push({
+            comment: evaluation.comment,
+            evaluation: evaluation.data.evaluation,
+          });
+        } catch (e) {
+          evaluations.push({ comment: '', evaluation: -1 });
+        }
       }
     }
-  }
 
-  if(typeof(activity.objectives) !== 'undefined') {
-    for (let i = 0; i < activity.objectives.length; i += 1) {
-      const objective = activity.objectives[i];
-      const forgeId = event.uuid(
-        `${req.params.piloteId}_${req.params.id}_${objective}_${
-          activity.theme
-        }_${activity.title}_${activity.end}`,
-      );
-      try {
-        const evaluation = await elasticsearch.get(`pdc`, forgeId);
-        evaluations.push({
-          comment: evaluation.comment,
-          evaluation: evaluation.data.evaluation,
-        });
-      } catch (e) {
-        evaluations.push({ comment: '', evaluation: -1 });
+    if(typeof(activity.objectives) !== 'undefined') {
+      for (let i = 0; i < activity.objectives.length; i += 1) {
+        const objective = activity.objectives[i];
+        const forgeId = event.uuid(
+          `${req.params.piloteId}_${req.params.id}_${objective}_${
+            activity.theme
+          }_${activity.title}_${activity.end}`,
+        );
+        try {
+          const evaluation = await elasticsearch.get(`pdc`, forgeId);
+          evaluations.push({
+            comment: evaluation.comment,
+            evaluation: evaluation.data.evaluation,
+          });
+        } catch (e) {
+          evaluations.push({ comment: '', evaluation: -1 });
+        }
       }
     }
-  }
 
-  const forgeId = event.uuid(
-    `${req.params.piloteId}_${req.params.id}_Commentaire global_${
-      activity.theme
-    }_${activity.title}_${activity.end}`,
-  );
-  let globalPiloteComments = '';
-  try {
-    const evaluation = await elasticsearch.get(`pdc`, forgeId);
-    globalPiloteComments = evaluation.comment;
-  } catch (e) {}
-  res.json({ evaluations, globalPiloteComments });
+    const forgeId = event.uuid(
+      `${req.params.piloteId}_${req.params.id}_Commentaire global_${
+        activity.theme
+      }_${activity.title}_${activity.end}`,
+    );
+    let globalPiloteComments = '';
+    try {
+      const evaluation = await elasticsearch.get(`pdc`, forgeId);
+      globalPiloteComments = evaluation.comment;
+    } catch (e) {}
+    res.json({ evaluations, globalPiloteComments });
+  }
 };
 
 const deleteActivity = async (req, res) => {
@@ -394,7 +398,7 @@ const deleteActivity = async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.json(500, 'Error');
+    res.status(500).json('Error');
   }
 };
 
