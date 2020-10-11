@@ -59,6 +59,7 @@ passport.use(
       clientID: process.env.AUTH0_CLIENTID,
       clientSecret: process.env.AUTH0_CLIENTSECRET,
       callbackURL: '/v0/callback',
+      proxy: process.env.BEHIND_PROXY === 'true',
     },
     (accessToken, refreshToken, extraParams, profile, done) =>
       done(null, { email: profile.emails[0].value, id: profile.id }),
