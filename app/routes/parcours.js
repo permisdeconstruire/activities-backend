@@ -1,12 +1,16 @@
 const elasticsearch = require('../utils/elasticsearch');
+const agenceMapping = require('../utils/agenceMapping');
 
 const collection = 'parcours';
 
 const listParcours = async (req, res) => {
   try {
-    const parcours = await elasticsearch.search(`mongodb_${collection}`, {
-      query: { match_all: {} },
-    });
+    const parcours = await elasticsearch.search(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      {
+        query: { match_all: {} },
+      },
+    );
     res.json(parcours);
   } catch (err) {
     console.error(err);
@@ -16,21 +20,27 @@ const listParcours = async (req, res) => {
 
 const getParcoursByTitle = async (req, res) => {
   try {
-    const parcours = await elasticsearch.search(`mongodb_${collection}`, {
-      query: { term: {title: req.params.title} },
-    });
+    const parcours = await elasticsearch.search(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      {
+        query: { term: { title: req.params.title } },
+      },
+    );
     res.json(parcours);
   } catch (err) {
     console.error(err);
     res.json(500, 'Error');
   }
-}
+};
 
 const newParcours = async (req, res) => {
   try {
     const {
       body: { _id },
-    } = await elasticsearch.index(`mongodb_${collection}`, { ...req.body });
+    } = await elasticsearch.index(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      { ...req.body },
+    );
     res.json(_id);
   } catch (err) {
     console.error(err);
@@ -41,7 +51,7 @@ const newParcours = async (req, res) => {
 const getParcours = async (req, res) => {
   try {
     const parcours = await elasticsearch.get(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
     );
     res.json(parcours);
@@ -54,7 +64,7 @@ const getParcours = async (req, res) => {
 const editParcours = async (req, res) => {
   try {
     const result = await elasticsearch.update(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
       { ...req.body },
     );
@@ -68,7 +78,7 @@ const editParcours = async (req, res) => {
 const deleteParcours = async (req, res) => {
   try {
     const result = await elasticsearch.delete(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
     );
     res.json(result);

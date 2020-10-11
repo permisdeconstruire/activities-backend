@@ -1,9 +1,11 @@
 const event = require('../utils/event');
 const elasticsearch = require('../utils/elasticsearch');
+const agenceMapping = require('../utils/agenceMapping');
 
 const newEvent = async (req, res) => {
   try {
     await event.fire(
+      req.agence,
       req.body.pilote,
       { _id: req.user.roles.copilote, email: req.user.email },
       req.body.type,
@@ -14,15 +16,23 @@ const newEvent = async (req, res) => {
 
     if (req.body.type === 'parcours') {
       if (['terminate', 'stop'].indexOf(req.body.data.what) !== -1) {
-        await elasticsearch.update(`mongodb_pilotes`, req.body.pilote._id, {
-          pillar: '',
-          level: 0,
-        });
+        await elasticsearch.update(
+          `${agenceMapping[req.agence].dbPrefix}pilotes`,
+          req.body.pilote._id,
+          {
+            pillar: '',
+            level: 0,
+          },
+        );
       } else {
-        await elasticsearch.update(`mongodb_pilotes`, req.body.pilote._id, {
-          pillar: req.body.data.name,
-          level: req.body.data.level,
-        });
+        await elasticsearch.update(
+          `${agenceMapping[req.agence].dbPrefix}pilotes`,
+          req.body.pilote._id,
+          {
+            pillar: req.body.data.name,
+            level: req.body.data.level,
+          },
+        );
       }
     }
     res.json('OK');

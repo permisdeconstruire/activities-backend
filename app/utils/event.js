@@ -1,6 +1,7 @@
 const moment = require('moment');
 const uuidv5 = require('uuid/v5');
 const elasticsearch = require('./elasticsearch');
+const agenceMapping = require('./agenceMapping');
 
 const PDC_NAMESPACE = '7065726d-6973-6465-636f-6e7374727569';
 
@@ -9,6 +10,7 @@ function uuid(string) {
 }
 
 async function fire(
+  agence,
   pilote,
   source,
   type,
@@ -19,7 +21,10 @@ async function fire(
   const params = {};
   const photoPrefix = 'ph_';
 
-  const fullPilote = await elasticsearch.get('mongodb_pilotes', pilote._id);
+  const fullPilote = await elasticsearch.get(
+    `${agenceMapping[agence].dbPrefix}pilotes`,
+    pilote._id,
+  );
 
   const photoPilote = { _id: pilote._id, pseudo: pilote.pseudo };
 
@@ -55,7 +60,11 @@ async function fire(
     }
   }
 
-  const result = await elasticsearch.index('pdc', event, params);
+  const result = await elasticsearch.index(
+    `${agenceMapping[agence].eventPrefix}pdc`,
+    event,
+    params,
+  );
   return result.body;
 }
 

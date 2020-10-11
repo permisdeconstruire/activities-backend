@@ -1,12 +1,16 @@
 const elasticsearch = require('../utils/elasticsearch');
+const agenceMapping = require('../utils/agenceMapping');
 
 const collection = 'forms';
 
 const listForms = async (req, res) => {
   try {
-    const forms = await elasticsearch.search(`mongodb_${collection}`, {
-      query: { match_all: {} },
-    });
+    const forms = await elasticsearch.search(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      {
+        query: { match_all: {} },
+      },
+    );
     res.json(forms);
   } catch (err) {
     console.error(err);
@@ -18,7 +22,10 @@ const newForm = async (req, res) => {
   try {
     const {
       body: { _id },
-    } = await elasticsearch.index(`mongodb_${collection}`, { ...req.body });
+    } = await elasticsearch.index(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      { ...req.body },
+    );
     res.json(_id);
   } catch (err) {
     console.error(err);
@@ -29,7 +36,7 @@ const newForm = async (req, res) => {
 const editForm = async (req, res) => {
   try {
     const result = await elasticsearch.update(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
       { ...req.body },
     );
@@ -42,20 +49,23 @@ const editForm = async (req, res) => {
 
 const getForm = async (req, res) => {
   try {
-    const forms = await elasticsearch.search(`mongodb_${collection}`, {
-      query: {
-        bool: {
-          must: [
-            {
-              term: { type: req.params.type },
-            },
-            {
-              term: { title: req.params.title },
-            },
-          ],
+    const forms = await elasticsearch.search(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      {
+        query: {
+          bool: {
+            must: [
+              {
+                term: { type: req.params.type },
+              },
+              {
+                term: { title: req.params.title },
+              },
+            ],
+          },
         },
       },
-    });
+    );
     res.json(forms[0]);
   } catch (err) {
     console.error(err);
@@ -66,7 +76,7 @@ const getForm = async (req, res) => {
 const deleteForm = async (req, res) => {
   try {
     const result = await elasticsearch.delete(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
     );
     res.json(result);

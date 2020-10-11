@@ -1,4 +1,8 @@
 {
+    "index_patterns": ["*copilotes*"],
+    "settings": {
+        "number_of_shards": 1
+    },
     "mappings": {
         "dynamic_templates": [
             {

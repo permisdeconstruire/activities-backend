@@ -1,12 +1,16 @@
 const elasticsearch = require('../utils/elasticsearch');
+const agenceMapping = require('../utils/agenceMapping');
 
 const collection = 'promotions';
 
 const listPromotions = async (req, res) => {
   try {
-    const promotions = await elasticsearch.search(`mongodb_${collection}`, {
-      query: { match_all: {} },
-    });
+    const promotions = await elasticsearch.search(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      {
+        query: { match_all: {} },
+      },
+    );
     res.json(promotions);
   } catch (err) {
     console.error(err);
@@ -18,7 +22,10 @@ const newPromotions = async (req, res) => {
   try {
     const {
       body: { _id },
-    } = await elasticsearch.index(`mongodb_${collection}`, { ...req.body });
+    } = await elasticsearch.index(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      { ...req.body },
+    );
     res.json(_id);
   } catch (err) {
     console.error(err);
@@ -29,7 +36,7 @@ const newPromotions = async (req, res) => {
 const editPromotions = async (req, res) => {
   try {
     const result = await elasticsearch.update(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
       { ...req.body },
     );
@@ -43,7 +50,7 @@ const editPromotions = async (req, res) => {
 const deletePromotions = async (req, res) => {
   try {
     const result = await elasticsearch.delete(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
     );
     res.json(result);

@@ -12,6 +12,11 @@ const ExtractJwt = require('passport-jwt').ExtractJwt;
 const roles = require('./utils/roles');
 const routes = require('./routes/');
 
+function agenceSelector(req, res, next) {
+  req.agence = req.header('X-pdc-agence') || 'nantes';
+  next();
+}
+
 function ignoreFavicon(req, res, next) {
   if (req.originalUrl === '/favicon.ico') {
     res.status(204).json({ nope: true });
@@ -74,6 +79,8 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser((user, done) => {
   done(null, user);
 });
+
+app.use(agenceSelector);
 
 app.use('/v0/', routes);
 app.use('/static', express.static(path.join(__dirname, '../static')));

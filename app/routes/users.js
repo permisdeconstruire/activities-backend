@@ -2,6 +2,7 @@ const moment = require('moment');
 const jwt = require('jsonwebtoken');
 const elasticsearch = require('../utils/elasticsearch');
 const event = require('../utils/event');
+const agenceMapping = require('../utils/agenceMapping');
 
 const alreadyExistQuery = ({ prenom, nom, ph_datenaissance }) => ({
   query: {
@@ -30,13 +31,16 @@ const alreadyExistQuery = ({ prenom, nom, ph_datenaissance }) => ({
 const listUsers = async (req, res, collection) => {
   try {
     if (typeof req.query.filter === 'undefined') {
-      const users = await elasticsearch.search(`mongodb_${collection}`, {
-        query: { match_all: {} },
-      });
+      const users = await elasticsearch.search(
+        `${agenceMapping[req.agence].dbPrefix}${collection}`,
+        {
+          query: { match_all: {} },
+        },
+      );
       res.json(users);
     } else {
       const users = await elasticsearch.search(
-        `mongodb_${collection}`,
+        `${agenceMapping[req.agence].dbPrefix}${collection}`,
         req.query.filter,
       );
       res.json(users);
@@ -51,11 +55,17 @@ const cooperatorListPilotes = async (req, res) => {
   try {
     let pilotes;
     if (typeof req.query.filter === 'undefined') {
-      pilotes = await elasticsearch.search(`mongodb_pilotes`, {
-        query: { match_all: {} },
-      });
+      pilotes = await elasticsearch.search(
+        `${agenceMapping[req.agence].dbPrefix}pilotes`,
+        {
+          query: { match_all: {} },
+        },
+      );
     } else {
-      pilotes = await elasticsearch.search(`mongodb_pilotes`, req.query.filter);
+      pilotes = await elasticsearch.search(
+        `${agenceMapping[req.agence].dbPrefix}pilotes`,
+        req.query.filter,
+      );
     }
     res.json(
       pilotes.map(rPilote => {
@@ -94,17 +104,20 @@ const newUser = async (req, res, collection) => {
       let alreadyExist = [];
       try {
         alreadyExist = await elasticsearch.search(
-          `mongodb_${collection}`,
+          `${agenceMapping[req.agence].dbPrefix}${collection}`,
           alreadyExistQuery(fullUser),
         );
       } catch (e) {}
       if (alreadyExist.length === 0) {
         const {
           body: { _id },
-        } = await elasticsearch.index(`mongodb_${collection}`, {
-          ...fullUser,
-          pseudo,
-        });
+        } = await elasticsearch.index(
+          `${agenceMapping[req.agence].dbPrefix}${collection}`,
+          {
+            ...fullUser,
+            pseudo,
+          },
+        );
         res.json(_id);
       } else {
         throw new Error('PiloteAlreadyExists');
@@ -116,15 +129,21 @@ const newUser = async (req, res, collection) => {
       }
       const {
         body: { _id },
-      } = await elasticsearch.index(`mongodb_${collection}`, {
-        ...req.body,
-        titre,
-      });
+      } = await elasticsearch.index(
+        `${agenceMapping[req.agence].dbPrefix}${collection}`,
+        {
+          ...req.body,
+          titre,
+        },
+      );
       res.json(_id);
     } else {
       const {
         body: { _id },
-      } = await elasticsearch.index(`mongodb_${collection}`, req.body);
+      } = await elasticsearch.index(
+        `${agenceMapping[req.agence].dbPrefix}${collection}`,
+        req.body,
+      );
       res.json(_id);
     }
   } catch (err) {
@@ -140,7 +159,7 @@ const newUser = async (req, res, collection) => {
 const editUser = async (req, res, collection) => {
   try {
     const oldUser = await elasticsearch.get(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
     );
 
@@ -167,7 +186,7 @@ const editUser = async (req, res, collection) => {
       let alreadyExist = [];
       try {
         alreadyExist = await elasticsearch.search(
-          `mongodb_${collection}`,
+          `${agenceMapping[req.agence].dbPrefix}${collection}`,
           alreadyExistQuery(fullUser),
         );
       } catch (e) {}
@@ -180,6 +199,7 @@ const editUser = async (req, res, collection) => {
           if (typeof oldUser[field] === 'undefined') {
             eventPromises.push(
               event.fire(
+                req.agence,
                 { _id: req.params.id },
                 { _id: req.user.roles.copilote, email: req.user.email },
                 'profileUpdate',
@@ -193,6 +213,7 @@ const editUser = async (req, res, collection) => {
           } else if (oldUser[field].toString() !== fullUser[field].toString()) {
             eventPromises.push(
               event.fire(
+                req.agence,
                 { _id: req.params.id },
                 { _id: req.user.roles.copilote, email: req.user.email },
                 'profileUpdate',
@@ -216,7 +237,7 @@ const editUser = async (req, res, collection) => {
     }
 
     const result = await elasticsearch.update(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
       fullUser,
     );
@@ -237,7 +258,7 @@ const editUser = async (req, res, collection) => {
 const deleteUser = async (req, res, collection) => {
   try {
     const result = await elasticsearch.delete(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
     );
     res.json(result);
@@ -254,7 +275,7 @@ const impersonateCooperator = async (req, res) => {
     tokenOptions.audience = process.env.JWT_AUDIENCE;
     tokenOptions.expiresIn = process.env.JWT_TTL;
     const cooperator = await elasticsearch.get(
-      'mongodb_cooperators',
+      `${agenceMapping[req.agence].dbPrefix}cooperators`,
       req.params.id,
     );
     const token = encodeURIComponent(
@@ -265,7 +286,9 @@ const impersonateCooperator = async (req, res) => {
       ),
     );
     res.redirect(
-      `https://cooperateur.nantes.assopermisdeconstruire.org/?token=${token}`,
+      `https://cooperateur.${
+        agenceMapping[req.agence].hostPart
+      }.assopermisdeconstruire.org/?token=${token}`,
     );
   } catch (err) {
     console.error(err);
@@ -276,56 +299,62 @@ const impersonateCooperator = async (req, res) => {
 const getPilote = async (req, res) => {
   try {
     const { pillar, level } = await elasticsearch.get(
-      `mongodb_pilotes`,
+      `${agenceMapping[req.agence].dbPrefix}pilotes`,
       req.params.id,
     );
-    const objectives = await elasticsearch.search('mongodb_pedagogy', {
-      query: {
-        bool: {
-          must: [
-            {
-              term: {
-                pillar,
+    const objectives = await elasticsearch.search(
+      `${agenceMapping[req.agence].dbPrefix}pedagogy`,
+      {
+        query: {
+          bool: {
+            must: [
+              {
+                term: {
+                  pillar,
+                },
               },
-            },
-            {
-              term: {
-                level,
+              {
+                term: {
+                  level,
+                },
               },
-            },
-          ],
+            ],
+          },
         },
       },
-    });
+    );
 
-    const evaluated = await elasticsearch.search('pdc', {
-      query: {
-        bool: {
-          must: [
-            {
-              term: {
-                type: 'evaluation',
+    const evaluated = await elasticsearch.search(
+      `${agenceMapping[req.agence].eventPrefix}pdc`,
+      {
+        query: {
+          bool: {
+            must: [
+              {
+                term: {
+                  type: 'evaluation',
+                },
               },
-            },
-            {
-              term: {
-                'data.activity.status': pillar,
+              {
+                term: {
+                  'data.activity.status': pillar,
+                },
               },
-            },
-            {
-              term: {
-                'data.activity.level': level,
+              {
+                term: {
+                  'data.activity.level': level,
+                },
               },
-            },
-            {
-              term: {
-                'pilote._id': req.params.id,
+              {
+                term: {
+                  'pilote._id': req.params.id,
+                },
               },
-            },
-          ],
+            ],
+          },
         },
       },
-    });
+    );
     res.json({
       evaluated: evaluated.map(e => ({
         objective: e.data.objective,

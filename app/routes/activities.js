@@ -3,78 +3,90 @@ const jwt = require('jsonwebtoken');
 const event = require('../utils/event');
 const screenshot = require('../utils/screenshot');
 const elasticsearch = require('../utils/elasticsearch');
+const agenceMapping = require('../utils/agenceMapping');
 
 const collection = 'activities';
 
 const adminListPromotionActivities = async (req, res) => {
   try {
-    const activities = await elasticsearch.search(`mongodb_${collection}`, {
-      query: {
-        term: {
-          'promotion._id': req.params.promotionId
-        }
+    const activities = await elasticsearch.search(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      {
+        query: {
+          term: {
+            'promotion._id': req.params.promotionId,
+          },
+        },
       },
-    });
+    );
 
-    res.json(activities)
-  } catch(e) {
+    res.json(activities);
+  } catch (e) {
     res.status(500).json('Error');
   }
-}
+};
 
 const adminListEvaluationPilote = async (req, res) => {
   try {
-    const evaluations = await elasticsearch.search('pdc', {
-      query: {
-        bool: {
-          must: [
-            {
-              term: {
-                type: 'evaluation',
+    const evaluations = await elasticsearch.search(
+      `${agenceMapping[req.agence].eventPrefix}pdc`,
+      {
+        query: {
+          bool: {
+            must: [
+              {
+                term: {
+                  type: 'evaluation',
+                },
               },
-            },
-            {
-              term: {
-                'pilote._id': req.params.piloteId,
+              {
+                term: {
+                  'pilote._id': req.params.piloteId,
+                },
               },
-            },
-            {
-              term: {
-                'data.activity.promotion._id': req.params.promotionId,
+              {
+                term: {
+                  'data.activity.promotion._id': req.params.promotionId,
+                },
               },
-            },
-            {
-              range: {
-                date: {
-                  gte: req.query.startDate,
-                }
-              }
-            }
-          ]
-        }
+              {
+                range: {
+                  date: {
+                    gte: req.query.startDate,
+                  },
+                },
+              },
+            ],
+          },
+        },
       },
-    });
+    );
 
-    res.json(evaluations.map(e => ({
-      evaluation: e.data.evaluation,
-      objective: e.data.objective,
-    })))
-  } catch(e) {
+    res.json(
+      evaluations.map(e => ({
+        evaluation: e.data.evaluation,
+        objective: e.data.objective,
+      })),
+    );
+  } catch (e) {
     console.error(e.meta.body.error);
     res.status(500).json('Error');
   }
-}
+};
 
-const listActivities = async () => {
-  const activities = await elasticsearch.search(`mongodb_${collection}`, {
-    query: {
-      range: {
-        start: {
-          gte: 'now-90d/d'
-        }
-      }
+const listActivities = async agence => {
+  const activities = await elasticsearch.search(
+    `${agenceMapping[agence].dbPrefix}${collection}`,
+    {
+      query: {
+        range: {
+          start: {
+            gte: 'now-90d/d',
+          },
+        },
+      },
     },
-  });
+  );
   activities.sort((a, b) => {
     if (moment(a.start).isBefore(moment(b.start))) {
       return 1;
@@ -86,7 +98,7 @@ const listActivities = async () => {
 
 const adminListActivities = async (req, res) => {
   try {
-    const activities = await listActivities();
+    const activities = await listActivities(req.agence);
     res.json(activities);
   } catch (err) {
     console.error(err);
@@ -96,7 +108,7 @@ const adminListActivities = async (req, res) => {
 
 const cooperatorListActivities = async (req, res) => {
   try {
-    const activities = await listActivities();
+    const activities = await listActivities(req.agence);
     res.json(
       activities
         .filter(activity => activity.published)
@@ -115,7 +127,7 @@ const cooperatorListActivities = async (req, res) => {
 
 const piloteListActivities = async (req, res) => {
   try {
-    const activities = await listActivities();
+    const activities = await listActivities(req.agence);
     res.json(
       activities
         .filter(activity => activity.published)
@@ -144,13 +156,17 @@ const publicDownloadActivities = async (req, res) => {
   try {
     if (req.query.token) {
       const agenda = await screenshot(
-        `https://pilote.nantes.assopermisdeconstruire.org/?token=${
-          req.query.token
-        }&hide=true`,
+        `https://pilote.${
+          agenceMapping[req.agence].hostPart
+        }.assopermisdeconstruire.org/?token=${req.query.token}&hide=true`,
       );
       res.download(agenda);
     } else {
-      const agenda = await screenshot();
+      const agenda = await screenshot(
+        `https://agenda.${
+          agenceMapping[req.agence].hostPart
+        }.assopermisdeconstruire.org/`,
+      );
       res.download(agenda);
     }
   } catch (e) {
@@ -165,7 +181,10 @@ const impersonateDownloadActivities = async (req, res) => {
     tokenOptions.issuer = process.env.JWT_ISSUER;
     tokenOptions.audience = process.env.JWT_AUDIENCE;
     tokenOptions.expiresIn = process.env.JWT_TTL;
-    const pilote = await elasticsearch.get('mongodb_pilotes', req.params.id);
+    const pilote = await elasticsearch.get(
+      `${agenceMapping[req.agence].dbPrefix}pilotes`,
+      req.params.id,
+    );
     const token = encodeURIComponent(
       jwt.sign(
         { email: pilote.email, id: 'impersonate' },
@@ -174,7 +193,9 @@ const impersonateDownloadActivities = async (req, res) => {
       ),
     );
     const agenda = await screenshot(
-      `https://pilote.nantes.assopermisdeconstruire.org/?token=${token}&hide=true`,
+      `https://pilote.${
+        agenceMapping[req.agence].hostPart
+      }.assopermisdeconstruire.org/?token=${token}&hide=true`,
     );
     res.download(agenda, `agenda_${pilote.pseudo}.pdf`);
   } catch (e) {
@@ -185,7 +206,7 @@ const impersonateDownloadActivities = async (req, res) => {
 
 const publicListActivities = async (req, res) => {
   try {
-    const activities = await listActivities();
+    const activities = await listActivities(req.agence);
     res.json(
       activities
         .filter(activity => activity.published)
@@ -207,7 +228,10 @@ const newActivity = async (req, res) => {
   try {
     const {
       body: { _id },
-    } = await elasticsearch.index(`mongodb_${collection}`, { ...req.body });
+    } = await elasticsearch.index(
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
+      { ...req.body },
+    );
     res.json(_id);
   } catch (err) {
     console.error(err);
@@ -218,7 +242,7 @@ const newActivity = async (req, res) => {
 const editActivityComment = async (req, res) => {
   try {
     const result = await elasticsearch.update(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
       { cooperatorComments: req.body.comments },
     );
@@ -232,7 +256,7 @@ const editActivityComment = async (req, res) => {
 const editActivity = async (req, res) => {
   try {
     const result = await elasticsearch.update(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
       { ...req.body },
     );
@@ -244,19 +268,23 @@ const editActivity = async (req, res) => {
 };
 
 const registerActivity = async (
+  agence,
   activityId,
   rPilote,
   body,
   who = { _id: 'application' },
 ) => {
   let pilotes;
-  if(Array.isArray(rPilote)) {
+  if (Array.isArray(rPilote)) {
     pilotes = rPilote;
   } else {
     pilotes = [rPilote];
   }
 
-  const activity = await elasticsearch.get(`mongodb_${collection}`, activityId);
+  const activity = await elasticsearch.get(
+    `${agenceMapping[agence].dbPrefix}${collection}`,
+    activityId,
+  );
   if (typeof activity.participants === 'undefined') {
     activity.participants = [];
   }
@@ -266,7 +294,7 @@ const registerActivity = async (
     forbidden.push('Individuelle');
   }
   if (forbidden.indexOf(activity.status) === -1) {
-    for(let i = 0; i < pilotes.length; i += 1) {
+    for (let i = 0; i < pilotes.length; i += 1) {
       const pilote = pilotes[i];
       const participantIndex = activity.participants.findIndex(
         participant => participant._id === pilote._id,
@@ -278,6 +306,7 @@ const registerActivity = async (
             pseudo: pilote.pseudo,
           });
           await event.fire(
+            agence,
             { _id: pilote._id, pseudo: pilote.pseudo },
             who,
             'activity',
@@ -288,21 +317,20 @@ const registerActivity = async (
             },
           );
         }
-      } else {
-        if (participantIndex !== -1) {
-          activity.participants.splice(participantIndex, 1);
-          await event.fire(
-            { _id: pilote._id, pseudo: pilote.pseudo },
-            who,
-            'activity',
-            body.justification,
-            { activity, subType: 'unregister' },
-          );
-        }
+      } else if (participantIndex !== -1) {
+        activity.participants.splice(participantIndex, 1);
+        await event.fire(
+          agence,
+          { _id: pilote._id, pseudo: pilote.pseudo },
+          who,
+          'activity',
+          body.justification,
+          { activity, subType: 'unregister' },
+        );
       }
     }
     const result = await elasticsearch.update(
-      `mongodb_${collection}`,
+      `${agenceMapping[agence].dbPrefix}${collection}`,
       activityId,
       activity,
     );
@@ -314,9 +342,10 @@ const registerActivity = async (
 const adminRegisterActivity = async (req, res) => {
   try {
     const result = await registerActivity(
+      req.agence,
       req.params.id,
       req.body.pilote,
-      { action: req.body.action, justification: ''},
+      { action: req.body.action, justification: '' },
       { _id: req.user.roles.copilote, email: req.user.email },
     );
     res.json(result);
@@ -329,6 +358,7 @@ const adminRegisterActivity = async (req, res) => {
 const piloteRegisterActivity = async (req, res) => {
   try {
     const result = await registerActivity(
+      req.agence,
       req.params.id,
       { _id: req.user.roles.pilote, pseudo: req.user.pseudo },
       req.body,
@@ -342,12 +372,13 @@ const piloteRegisterActivity = async (req, res) => {
 
 const evaluateActivity = async (req, res) => {
   const activity = await elasticsearch.get(
-    `mongodb_${collection}`,
+    `${agenceMapping[req.agence].dbPrefix}${collection}`,
     req.params.id,
   );
   if (['Fermeture', 'Autonomie'].indexOf(activity.status) === -1) {
     if (typeof req.body.activityAction !== 'undefined') {
       await event.fire(
+        req.agence,
         { _id: req.body.pilote._id, pseudo: req.body.pilote.pseudo },
         { _id: req.user.roles.cooperator, titre: req.user.titre },
         'activity',
@@ -365,6 +396,7 @@ const evaluateActivity = async (req, res) => {
       );
     } else {
       await event.fire(
+        req.agence,
         { _id: req.body.pilote._id, pseudo: req.body.pilote.pseudo },
         { _id: req.user.roles.cooperator, titre: req.user.titre },
         'evaluation',
@@ -386,15 +418,19 @@ const evaluateActivity = async (req, res) => {
 
 const getEvaluationActivity = async (req, res) => {
   const activity = await elasticsearch.get(
-    `mongodb_${collection}`,
+    `${agenceMapping[req.agence].dbPrefix}${collection}`,
     req.params.id,
   );
-  if(typeof(activity.cooperators.find(c => c._id === req.user.roles.cooperator)) === 'undefined') {
+  if (
+    typeof activity.cooperators.find(
+      c => c._id === req.user.roles.cooperator,
+    ) === 'undefined'
+  ) {
     res.status(403).json('Impossible');
   } else {
     const evaluations = [];
 
-    if(typeof(activity.pedagogy) !== 'undefined') {
+    if (typeof activity.pedagogy !== 'undefined') {
       for (let i = 0; i < activity.pedagogy.length; i += 1) {
         const pedagogy = activity.pedagogy[i];
         const forgeId = event.uuid(
@@ -403,7 +439,10 @@ const getEvaluationActivity = async (req, res) => {
           }_${activity.title}_${activity.end}`,
         );
         try {
-          const evaluation = await elasticsearch.get(`pdc`, forgeId);
+          const evaluation = await elasticsearch.get(
+            `${agenceMapping[req.agence].eventPrefix}pdc`,
+            forgeId,
+          );
           evaluations.push({
             comment: evaluation.comment,
             evaluation: evaluation.data.evaluation,
@@ -414,7 +453,7 @@ const getEvaluationActivity = async (req, res) => {
       }
     }
 
-    if(typeof(activity.objectives) !== 'undefined') {
+    if (typeof activity.objectives !== 'undefined') {
       for (let i = 0; i < activity.objectives.length; i += 1) {
         const objective = activity.objectives[i];
         const forgeId = event.uuid(
@@ -423,7 +462,10 @@ const getEvaluationActivity = async (req, res) => {
           }_${activity.title}_${activity.end}`,
         );
         try {
-          const evaluation = await elasticsearch.get(`pdc`, forgeId);
+          const evaluation = await elasticsearch.get(
+            `${agenceMapping[req.agence].eventPrefix}pdc`,
+            forgeId,
+          );
           evaluations.push({
             comment: evaluation.comment,
             evaluation: evaluation.data.evaluation,
@@ -441,7 +483,10 @@ const getEvaluationActivity = async (req, res) => {
     );
     let globalPiloteComments = '';
     try {
-      const evaluation = await elasticsearch.get(`pdc`, forgeId);
+      const evaluation = await elasticsearch.get(
+        `${agenceMapping[req.agence].eventPrefix}pdc`,
+        forgeId,
+      );
       globalPiloteComments = evaluation.comment;
     } catch (e) {}
     res.json({ evaluations, globalPiloteComments });
@@ -451,7 +496,7 @@ const getEvaluationActivity = async (req, res) => {
 const deleteActivity = async (req, res) => {
   try {
     const result = await elasticsearch.delete(
-      `mongodb_${collection}`,
+      `${agenceMapping[req.agence].dbPrefix}${collection}`,
       req.params.id,
     );
     res.json(result);
@@ -460,7 +505,6 @@ const deleteActivity = async (req, res) => {
     res.status(500).json('Error');
   }
 };
-
 
 module.exports = {
   create: router => {
