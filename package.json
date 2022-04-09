@@ -43,7 +43,7 @@
     "inquirer": "^6.0.0",
     "jsonwebtoken": "^8.4.0",
     "lodash": "^4.17.11",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "mongodb": "^3.1.13",
     "passport": "^0.4.0",
     "passport-auth0": "^1.1.0",
