@@ -68,7 +68,7 @@ passport.use(
 );
 
 passport.use(
-  new JwtStrategy(strategyOpts, async (req, jwtPayload, done) => {
+  new JwtStrategy({...strategyOpts, passReqToCallback: true}, async (req, jwtPayload, done) => {
     const userInfo = await roles.getUserInfo(req.agence, jwtPayload.email);
     done(null, { ...jwtPayload, ...userInfo });
   }),
