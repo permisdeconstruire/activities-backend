@@ -13,5 +13,5 @@ module.exports = {
     hostPart: 'vannes',
     dbPrefix: 'vannes_',
     eventPrefix: 'vannes_',
-  },  
+  },
 };

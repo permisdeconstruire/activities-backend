@@ -27,6 +27,7 @@ function ignoreFavicon(req, res, next) {
 
 const app = express();
 
+app.use(agenceSelector);
 app.use(ignoreFavicon);
 app.use(cookieParser());
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -80,8 +81,6 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser((user, done) => {
   done(null, user);
 });
-
-app.use(agenceSelector);
 
 app.use('/v0/', routes);
 app.use('/static', express.static(path.join(__dirname, '../static')));
