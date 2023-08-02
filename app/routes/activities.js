@@ -81,7 +81,7 @@ const listActivities = async agence => {
       query: {
         range: {
           start: {
-            gte: 'now-90d/d',
+            gte: 'now-500d/d',
           },
         },
       },

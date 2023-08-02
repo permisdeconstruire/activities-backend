@@ -1,12 +1,13 @@
 const elasticsearch = require('./elasticsearch');
+const agenceMapping = require('./agenceMapping');
 
 const collections = ['pilotes', 'copilotes', 'cooperators'];
 
-const getUserInfo = async email => {
+const getUserInfo = async (agence, email) => {
   const userInfo = { roles: {} };
   try {
     const userPromises = collections.map(collection =>
-      elasticsearch.search(`mongodb_${collection}`, {
+      elasticsearch.search(`${agenceMapping[agence].dbPrefix}${collection}`, {
         query: { term: { email } },
       }),
     );
@@ -58,7 +59,7 @@ function isAdmin(req, res, next) {
 
 const listCooperators = async (req, res) => {
   try {
-    const cooperators = await elasticsearch.search(`mongodb_cooperators`, {
+    const cooperators = await elasticsearch.search(`${agenceMapping[req.agence].dbPrefix}cooperators`, {
       query: { match_all: {} },
     });
     res.json(cooperators);

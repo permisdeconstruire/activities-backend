@@ -9,4 +9,9 @@ module.exports = {
     dbPrefix: 'st_nazaire_',
     eventPrefix: 'st_nazaire_',
   },
+  'vannes': {
+    hostPart: 'vannes',
+    dbPrefix: 'vannes_',
+    eventPrefix: 'vannes_',
+  },  
 };
